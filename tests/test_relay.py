@@ -208,31 +208,59 @@ class SynologyCameraDiscoveryTests(unittest.TestCase):
         client = relay.SynologyClient(
             "https://dsm.example", None, 5, 5, verify_ssl=False
         )
+        client._api_info = {
+            "SYNO.API.Auth": {"path": "auth.cgi", "minVersion": 1, "maxVersion": 7},
+            "SYNO.SurveillanceStation.Camera": {"path": "entry.cgi", "minVersion": 1, "maxVersion": 9},
+            "SYNO.SurveillanceStation.Recording": {"path": "entry.cgi", "minVersion": 1, "maxVersion": 6},
+            "SYNO.SurveillanceStation.ActionRule": {"path": "entry.cgi", "minVersion": 1, "maxVersion": 1},
+        }
         session = Mock()
         session.__enter__ = Mock(return_value=Mock())
         session.__exit__ = Mock(return_value=False)
         client.session = Mock(return_value=session)
         return client
 
-    def test_merges_camera_list_variants(self):
+    def test_merges_cameras_from_v9_and_v1_compatibility_calls(self):
         client = self._client()
         client.call_json = Mock(side_effect=[
+            {"cameras": []},
             {"cameras": [{"id": 1, "name": "A"}]},
-            {"cameras": [{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]},
-            {"cameras": [{"id": 1, "name": "A"}]},
-        ])
-        self.assertEqual(client.camera_names("user", "pass"), {1: "A", 2: "B"})
-        self.assertEqual(client.call_json.call_count, 3)
-
-    def test_survives_one_camera_list_variant_failure(self):
-        client = self._client()
-        client.call_json = Mock(side_effect=[
-            relay.SynologyAPIError(105, "List"),
+            {"cameras": []},
+            {"cameras": []},
+            {"cameras": []},
             {"cameras": [{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]},
             {"cameras": []},
         ])
         self.assertEqual(client.camera_names("user", "pass"), {1: "A", 2: "B"})
+        calls = client.call_json.call_args_list
+        self.assertTrue(any(call.args[2] == 1 for call in calls))
+        self.assertTrue(any(call.args[4].get("basic") == "true" for call in calls))
 
+    def test_survives_failed_variants_when_another_returns_cameras(self):
+        client = self._client()
+        client.call_json = Mock(side_effect=[
+            relay.SynologyAPIError(105, "List"),
+            {"cameras": []},
+            {"cameras": [{"id": 2, "name": "B"}]},
+            {"cameras": []},
+            {"cameras": []},
+            {"cameras": []},
+            {"cameras": []},
+        ])
+        self.assertEqual(client.camera_names("user", "pass"), {2: "B"})
+
+    def test_camera_with_empty_name_remains_selectable_by_id(self):
+        client = self._client()
+        client.call_json = Mock(side_effect=[
+            {"cameras": [{"id": 7, "name": ""}]},
+            *[{"cameras": []} for _ in range(6)],
+        ])
+        self.assertEqual(client.camera_names("user", "pass"), {7: "카메라 ID 7"})
+
+    def test_zero_cameras_is_not_reported_as_permission_error(self):
+        client = self._client()
+        client.call_json = Mock(side_effect=[{"cameras": []} for _ in range(7)])
+        self.assertEqual(client.list_cameras("user", "pass"), [])
 
 class DurationParsingTests(unittest.TestCase):
     def test_parse_duration(self):

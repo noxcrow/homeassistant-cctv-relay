@@ -68,7 +68,7 @@
       "unknown": "예상하지 못한 오류입니다. Home Assistant 로그를 확인하세요.",
       "camera_not_found": "선택한 카메라 중 하나 이상을 Surveillance Station에서 찾을 수 없습니다. 카메라 목록을 다시 불러와 선택하세요.",
       "clip_duration_too_long": "감지 전/후 영상 시간의 합계는 최대 30초까지 설정할 수 있습니다.",
-      "no_cameras": "이 DSM 계정에서 조회 가능한 Surveillance Station 카메라가 없습니다. 카메라 접근 권한을 확인하세요.",
+      "no_cameras": "Surveillance Station Camera API가 카메라 0대를 반환했습니다. Surveillance Station에서 이 계정으로 카메라가 보이는지와 카메라 권한을 확인하세요.",
       "no_camera_selected": "카메라를 1대 이상 선택하세요.",
       "duplicate_cameras": "동일한 카메라를 중복 선택할 수 없습니다.",
       "account_disabled": "이 DSM 계정은 비활성화되어 있거나 게스트 계정입니다.",

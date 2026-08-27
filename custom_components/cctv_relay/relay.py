@@ -710,35 +710,59 @@ class SynologyClient:
     ) -> list[dict[str, Any]]:
         """Return all Surveillance Station cameras visible to the account.
 
-        Surveillance Station releases differ in how Camera.List filters are
-        interpreted. Query several compatible variants and merge by camera ID
-        so a restrictive filter cannot hide otherwise accessible cameras.
+        Camera.List semantics differ substantially across Surveillance Station
+        generations. Newer clients normally use v9 with ``basic=true`` while
+        Synology's older public sample uses v1 with ``basic=true``. Query both
+        families plus known filter variants and merge camera rows by ID.
         """
         api = "SYNO.SurveillanceStation.Camera"
-        variants = (
-            {},
-            {"privCamType": 3, "camStm": 2},
-            {"privCamType": 1, "camStm": 0},
-        )
+        info = self.discover()[api]
+        minimum = int(info["minVersion"])
+        maximum = int(info["maxVersion"])
+
+        candidates: list[tuple[int, dict[str, Any], str]] = []
+
+        def add(version: int, params: dict[str, Any], label: str) -> None:
+            resolved = max(minimum, min(version, maximum))
+            item = (resolved, params, label)
+            if item not in candidates:
+                candidates.append(item)
+
+        # Current Surveillance Station clients.
+        add(9, {"privCamType": 1, "basic": "true", "streamInfo": "true"}, "v9-basic-stream")
+        add(9, {"privCamType": 1, "basic": "true"}, "v9-basic")
+        add(9, {"basic": "true"}, "v9-basic-unfiltered")
+        add(9, {"privCamType": 3, "camStm": 2, "basic": "true"}, "v9-cms")
+        add(9, {"privCamType": 1, "camStm": 0, "basic": "true"}, "v9-local")
+        # Synology's public Surveillance Station sample uses Camera.List v1.
+        add(1, {"basic": "true"}, "v1-basic")
+        add(1, {"privCamType": 1, "basic": "true"}, "v1-local")
+
         merged: dict[int, dict[str, Any]] = {}
         unkeyed: list[dict[str, Any]] = []
-        first_error: Exception | None = None
+        errors: list[Exception] = []
+        successful_calls = 0
 
         with self.session(username, password) as active:
-            for params in variants:
+            for version, params, label in candidates:
                 try:
-                    data = self.call_json(api, "List", 9, active, params)
+                    data = self.call_json(api, "List", version, active, params)
                 except (RelayError, SynologyAPIError) as exc:
-                    if first_error is None:
-                        first_error = exc
+                    errors.append(exc)
+                    LOG.debug("Camera.List %s failed: %s", label, exc)
                     continue
-                cameras = data.get("cameras", [])
+                successful_calls += 1
+                cameras = data.get("cameras")
+                if cameras is None and isinstance(data.get("value"), list):
+                    cameras = data["value"]
                 if not isinstance(cameras, list):
-                    if first_error is None:
-                        first_error = RelayError(
-                            "Synology camera list returned an invalid response"
-                        )
+                    LOG.debug(
+                        "Camera.List %s returned no list field (keys=%s)",
+                        label,
+                        sorted(str(key) for key in data.keys()),
+                    )
                     continue
+                LOG.debug("Camera.List %s returned %d row(s)", label, len(cameras))
                 for camera in cameras:
                     if not isinstance(camera, dict):
                         continue
@@ -756,14 +780,18 @@ class SynologyClient:
                 len(merged),
             )
             return cameras
-        if first_error is not None:
-            raise first_error
+        if successful_calls == 0 and errors:
+            raise errors[0]
+        LOG.warning(
+            "Surveillance Station Camera.List completed successfully across %d compatible request(s) but returned zero cameras",
+            successful_calls,
+        )
         return []
 
     def camera_names(
         self, username: str, password: str
     ) -> dict[int, str]:
-        """Map Surveillance Station camera IDs to their configured names."""
+        """Map accessible Surveillance Station camera IDs to display names."""
         result: dict[int, str] = {}
         for camera in self.list_cameras(username, password):
             try:
@@ -771,8 +799,7 @@ class SynologyClient:
             except (KeyError, TypeError, ValueError):
                 continue
             name = str(camera.get("name", "")).strip()
-            if name:
-                result[camera_id] = name
+            result[camera_id] = name or f"카메라 ID {camera_id}"
         return result
 
     def list_history(

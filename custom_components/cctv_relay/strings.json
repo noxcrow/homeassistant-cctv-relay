@@ -68,7 +68,7 @@
       "unknown": "Unexpected error. Check the Home Assistant log.",
       "camera_not_found": "One or more selected cameras were not found in Surveillance Station. Reload the camera list and select again.",
       "clip_duration_too_long": "The combined pre/post clip duration cannot exceed 30 seconds.",
-      "no_cameras": "No Surveillance Station cameras are visible to this DSM account. Check camera permissions.",
+      "no_cameras": "The Surveillance Station Camera API returned zero cameras. Verify that this account can see cameras in Surveillance Station and has camera permissions.",
       "no_camera_selected": "Select at least one camera.",
       "duplicate_cameras": "The same camera cannot be selected more than once.",
       "account_disabled": "This DSM account is disabled or is a guest account.",
