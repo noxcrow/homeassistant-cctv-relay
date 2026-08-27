@@ -19,9 +19,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.selector import (
     EntitySelector,
     EntitySelectorConfig,
-    SelectSelector,
-    SelectSelectorConfig,
-    SelectSelectorMode,
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -47,6 +47,9 @@ from .const import (
     DEFAULT_PRE_SECONDS,
     DEFAULT_VERIFY_SSL,
     DOMAIN,
+    MAX_CLIP_SECONDS,
+    MAX_POST_SECONDS,
+    MAX_PRE_SECONDS,
 )
 from .relay import ConfigError, RelayError, SynologyAPIError, SynologyClient
 
@@ -61,7 +64,25 @@ def _required_field(
     return vol.Required(key)
 
 
+def _bounded_int_default(
+    defaults: dict[str, Any], key: str, fallback: int, minimum: int, maximum: int
+) -> int:
+    try:
+        value = int(defaults.get(key, fallback))
+    except (TypeError, ValueError):
+        value = fallback
+    return max(minimum, min(maximum, value))
+
+
 def _base_schema(defaults: dict[str, Any]) -> vol.Schema:
+    pre_default = _bounded_int_default(
+        defaults, CONF_PRE_SECONDS, DEFAULT_PRE_SECONDS, 0, MAX_PRE_SECONDS
+    )
+    post_default = _bounded_int_default(
+        defaults, CONF_POST_SECONDS, DEFAULT_POST_SECONDS, 1, MAX_POST_SECONDS
+    )
+    if pre_default + post_default > MAX_CLIP_SECONDS:
+        post_default = max(1, MAX_CLIP_SECONDS - pre_default)
     return vol.Schema(
         {
             _required_field(
@@ -91,12 +112,28 @@ def _base_schema(defaults: dict[str, Any]) -> vol.Schema:
             ),
             vol.Required(
                 CONF_PRE_SECONDS,
-                default=defaults.get(CONF_PRE_SECONDS, DEFAULT_PRE_SECONDS),
-            ): vol.All(vol.Coerce(int), vol.Range(min=0, max=60)),
+                default=pre_default,
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=0,
+                    max=MAX_PRE_SECONDS,
+                    step=1,
+                    unit_of_measurement="s",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
             vol.Required(
                 CONF_POST_SECONDS,
-                default=defaults.get(CONF_POST_SECONDS, DEFAULT_POST_SECONDS),
-            ): vol.All(vol.Coerce(int), vol.Range(min=1, max=60)),
+                default=post_default,
+            ): NumberSelector(
+                NumberSelectorConfig(
+                    min=1,
+                    max=MAX_POST_SECONDS,
+                    step=1,
+                    unit_of_measurement="s",
+                    mode=NumberSelectorMode.BOX,
+                )
+            ),
             vol.Required(
                 CONF_HISTORY_ENABLED,
                 default=defaults.get(
@@ -116,30 +153,23 @@ def _base_schema(defaults: dict[str, Any]) -> vol.Schema:
 def _camera_schema(
     defaults: dict[str, Any], camera_names: dict[int, str]
 ) -> vol.Schema:
-    options = [
-        {"value": str(camera_id), "label": f"{name} (ID {camera_id})"}
+    options = {
+        str(camera_id): f"{name} (ID {camera_id})"
         for camera_id, name in sorted(
             camera_names.items(), key=lambda item: item[1].casefold()
         )
-    ]
+    }
 
     def _camera_field(key: str) -> vol.Marker:
         current = defaults.get(key)
-        if current is not None and int(current) in camera_names:
+        if current is not None and str(int(current)) in options:
             return vol.Required(key, default=str(int(current)))
         return vol.Required(key)
 
-    selector = SelectSelector(
-        SelectSelectorConfig(
-            options=options,
-            mode=SelectSelectorMode.DROPDOWN,
-            custom_value=False,
-        )
-    )
     return vol.Schema(
         {
-            _camera_field(CONF_FRONT_CAMERA_ID): selector,
-            _camera_field(CONF_BACK_CAMERA_ID): selector,
+            _camera_field(CONF_FRONT_CAMERA_ID): vol.In(options),
+            _camera_field(CONF_BACK_CAMERA_ID): vol.In(options),
         }
     )
 
@@ -216,6 +246,10 @@ async def _async_prepare_base_input(
     data[CONF_USERNAME] = str(data[CONF_USERNAME]).strip()
     data[CONF_PASSWORD] = str(data[CONF_PASSWORD])
     data[CONF_TELEGRAM_NOTIFY_ENTITY] = notify_entity
+    data[CONF_PRE_SECONDS] = int(data[CONF_PRE_SECONDS])
+    data[CONF_POST_SECONDS] = int(data[CONF_POST_SECONDS])
+    if data[CONF_PRE_SECONDS] + data[CONF_POST_SECONDS] > MAX_CLIP_SECONDS:
+        raise ValueError("clip_duration_too_long")
     if not data[CONF_USERNAME] or not data[CONF_PASSWORD]:
         raise SynologyAPIError(400, "login")
 
@@ -239,6 +273,7 @@ def _error_key(exc: Exception) -> str:
         "invalid_camera_ids",
         "camera_not_found",
         "not_enough_cameras",
+        "clip_duration_too_long",
         "telegram_not_ready",
     }:
         return str(exc)

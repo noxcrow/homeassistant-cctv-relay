@@ -57,3 +57,5 @@ Home Assistant에서 Synology Surveillance Station의 Action Rule 이벤트를 �
 ## 보안
 
 웹훅 ID, DSM 계정 정보, Telegram 토큰 등 인증정보를 공개 저장소나 로그에 기록하지 마십시오.
+
+감지 전/후 영상 시간의 합계는 최대 30초이며 최종 Telegram 전송 영상은 45MB를 넘지 않도록 제한됩니다.

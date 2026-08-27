@@ -11,15 +11,17 @@
           "username": "DSM relay username",
           "password": "DSM relay password",
           "telegram_notify_entity": "Telegram notify entity",
-          "pre_seconds": "Seconds before detection",
-          "post_seconds": "Seconds after detection",
+          "pre_seconds": "Pre-detection clip time (0-15 s)",
+          "post_seconds": "Post-detection clip time (1-30 s)",
           "history_enabled": "Recover missed webhooks from Action Rule history",
           "history_interval": "History check interval (seconds)"
         },
         "data_description": {
           "synology_url": "Use the hostname on the DSM TLS certificate.",
           "verify_ssl": "Keep enabled for a public hostname. Disable only for a trusted private DSM IP whose certificate does not contain that IP.",
-          "telegram_notify_entity": "A notify entity created by the Telegram bot integration."
+          "telegram_notify_entity": "A notify entity created by the Telegram bot integration.",
+          "pre_seconds": "Enter a number directly. Pre/post time combined is limited to 30 seconds; Telegram files are capped at 45 MB.",
+          "post_seconds": "Enter a number directly. Pre/post time combined is limited to 30 seconds; Telegram files are capped at 45 MB."
         }
       },
       "reconfigure": {
@@ -31,15 +33,19 @@
           "username": "DSM relay username",
           "password": "DSM relay password",
           "telegram_notify_entity": "Telegram notify entity",
-          "pre_seconds": "Seconds before detection",
-          "post_seconds": "Seconds after detection",
+          "pre_seconds": "Pre-detection clip time (0-15 s)",
+          "post_seconds": "Post-detection clip time (1-30 s)",
           "history_enabled": "Recover missed webhooks from Action Rule history",
           "history_interval": "History check interval (seconds)"
+        },
+        "data_description": {
+          "pre_seconds": "Enter a number directly. Pre/post time combined is limited to 30 seconds.",
+          "post_seconds": "Enter a number directly. Pre/post time combined is limited to 30 seconds."
         }
       },
       "cameras": {
         "title": "Select cameras",
-        "description": "Choose two cameras loaded from Surveillance Station.",
+        "description": "Cameras loaded from Surveillance Station are shown in dropdown menus. Select two different cameras by name and ID.",
         "data": {
           "front_camera_id": "Camera 1",
           "back_camera_id": "Camera 2"
@@ -67,7 +73,8 @@
       "telegram_not_ready": "The selected Telegram notify entity or send actions are not available.",
       "unknown": "Unexpected error. Check the Home Assistant log.",
       "camera_not_found": "One or more selected cameras were not found in Surveillance Station. Reload the camera list and select again.",
-      "not_enough_cameras": "Surveillance Station must provide at least two accessible cameras."
+      "not_enough_cameras": "Surveillance Station must provide at least two accessible cameras.",
+      "clip_duration_too_long": "The combined pre/post clip duration cannot exceed 30 seconds."
     },
     "abort": {
       "already_configured": "CCTV Relay is already configured.",

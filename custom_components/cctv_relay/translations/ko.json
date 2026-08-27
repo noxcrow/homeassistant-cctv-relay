@@ -11,15 +11,17 @@
           "username": "DSM 릴레이 사용자명",
           "password": "DSM 릴레이 암호",
           "telegram_notify_entity": "Telegram 알림 엔티티",
-          "pre_seconds": "감지 전 영상(초)",
-          "post_seconds": "감지 후 영상(초)",
+          "pre_seconds": "감지 전 영상 시간 (0~15초)",
+          "post_seconds": "감지 후 영상 시간 (1~30초)",
           "history_enabled": "Action Rule 이력에서 누락 웹훅 복구",
           "history_interval": "이력 확인 주기(초)"
         },
         "data_description": {
           "synology_url": "DSM TLS 인증서에 포함된 호스트 이름을 사용합니다.",
           "verify_ssl": "공인 호스트 이름은 켜 둡니다. 인증서에 IP가 없는 신뢰 가능한 DSM 내부 IP를 사용할 때만 끕니다.",
-          "telegram_notify_entity": "Telegram bot 통합이 만든 notify 엔티티를 선택합니다."
+          "telegram_notify_entity": "Telegram bot 통합이 만든 notify 엔티티를 선택합니다.",
+          "pre_seconds": "직접 숫자로 입력합니다. 감지 전/후 합계는 최대 30초이며, Telegram 전송 파일은 45MB로 제한됩니다.",
+          "post_seconds": "직접 숫자로 입력합니다. 감지 전/후 합계는 최대 30초이며, Telegram 전송 파일은 45MB로 제한됩니다."
         }
       },
       "reconfigure": {
@@ -31,15 +33,19 @@
           "username": "DSM 릴레이 사용자명",
           "password": "DSM 릴레이 암호",
           "telegram_notify_entity": "Telegram 알림 엔티티",
-          "pre_seconds": "감지 전 영상(초)",
-          "post_seconds": "감지 후 영상(초)",
+          "pre_seconds": "감지 전 영상 시간 (0~15초)",
+          "post_seconds": "감지 후 영상 시간 (1~30초)",
           "history_enabled": "Action Rule 이력에서 누락 웹훅 복구",
           "history_interval": "이력 확인 주기(초)"
+        },
+        "data_description": {
+          "pre_seconds": "직접 숫자로 입력합니다. 감지 전/후 합계는 최대 30초입니다.",
+          "post_seconds": "직접 숫자로 입력합니다. 감지 전/후 합계는 최대 30초입니다."
         }
       },
       "cameras": {
         "title": "카메라 선택",
-        "description": "Surveillance Station에서 조회한 카메라 중 사용할 두 대를 선택하세요.",
+        "description": "Surveillance Station에서 조회한 카메라가 드롭다운 메뉴로 표시됩니다. 카메라명과 ID를 확인해 서로 다른 두 대를 선택하세요.",
         "data": {
           "front_camera_id": "카메라 1",
           "back_camera_id": "카메라 2"
@@ -67,7 +73,8 @@
       "telegram_not_ready": "선택한 Telegram 알림 엔티티 또는 전송 액션을 사용할 수 없습니다.",
       "unknown": "예상하지 못한 오류입니다. Home Assistant 로그를 확인하세요.",
       "camera_not_found": "선택한 카메라 중 하나 이상을 Surveillance Station에서 찾을 수 없습니다. 카메라 목록을 다시 불러와 선택하세요.",
-      "not_enough_cameras": "Surveillance Station에서 접근 가능한 카메라가 최소 2대 필요합니다."
+      "not_enough_cameras": "Surveillance Station에서 접근 가능한 카메라가 최소 2대 필요합니다.",
+      "clip_duration_too_long": "감지 전/후 영상 시간의 합계는 최대 30초까지 설정할 수 있습니다."
     },
     "abort": {
       "already_configured": "CCTV 릴레이가 이미 설정되어 있습니다.",

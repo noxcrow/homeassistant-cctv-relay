@@ -59,12 +59,14 @@ Home Assistant 재시작 후:
 - Surveillance Station에서 조회된 카메라 목록에서 카메라 1 선택
 - Surveillance Station에서 조회된 카메라 목록에서 카메라 2 선택
 - Telegram Notify 엔티티
-- 영상 시작 전 포함 시간
-- 영상 종료 후 포함 시간
+- 감지 전 영상 시간: 직접 숫자 입력 (0~15초)
+- 감지 후 영상 시간: 직접 숫자 입력 (1~30초)
 - Action Rule History 복구 사용 여부
 - History 확인 주기
 
 카메라 1/2는 위치를 의미하지 않습니다. DSM 연결정보를 입력하면 Surveillance Station의 카메라 목록을 자동으로 조회하며, 표시되는 카메라명과 ID를 확인해 원하는 두 대를 선택하면 됩니다. Telegram 알림에는 Surveillance Station에 설정된 실제 카메라명이 표시됩니다.
+
+감지 전/후 영상 시간의 합계는 최대 30초입니다. Telegram Bot의 일반 비디오 업로드 한계(50MB)에 여유를 두기 위해 CCTV Relay는 최종 영상 파일을 45MB로 제한하며, 카메라 비트레이트가 높아 30초 미만 영상이 45MB를 넘는 경우에도 전송하지 않고 재시도/오류 처리합니다.
 
 ## Synology Action Rule 설정
 
