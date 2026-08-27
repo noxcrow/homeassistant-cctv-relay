@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "CCTV 릴레이 설정",
-        "description": "DSM 연결정보와 Telegram 설정을 입력하면 다음 단계에서 Surveillance Station 카메라 목록을 자동으로 불러옵니다. DSM 계정에는 필요한 Surveillance Station 조회 권한이 있어야 합니다.",
+        "description": "DSM 연결정보와 Telegram 설정을 입력하면 다음 단계에서 Surveillance Station 카메라 목록을 자동으로 불러옵니다. DSM 계정에는 필요한 Surveillance Station 조회 권한이 있어야 합니다.\n\n진단: {auth_detail}",
         "data": {
           "synology_url": "Synology DSM HTTPS 주소",
           "username": "DSM 릴레이 사용자명",
@@ -24,7 +24,7 @@
       },
       "reconfigure": {
         "title": "CCTV 릴레이 재구성",
-        "description": "DSM 연결정보를 확인한 뒤 다음 단계에서 Surveillance Station 카메라를 다시 선택할 수 있습니다. 저장하면 릴레이를 다시 불러오며 기존 대기열과 웹훅 ID는 유지됩니다.",
+        "description": "DSM 연결정보를 확인한 뒤 다음 단계에서 Surveillance Station 카메라를 다시 선택할 수 있습니다. 저장하면 릴레이를 다시 불러오며 기존 대기열과 웹훅 ID는 유지됩니다.\n\n진단: {auth_detail}",
         "data": {
           "synology_url": "Synology DSM HTTPS 주소",
           "username": "DSM 릴레이 사용자명",

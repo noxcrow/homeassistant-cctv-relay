@@ -312,6 +312,29 @@ async def _async_validate_camera_selection(
     return data
 
 
+def _auth_error_detail(exc: Exception) -> str | None:
+    """Return a credential-safe DSM authentication diagnostic string."""
+    if not isinstance(exc, SynologyAPIError) or exc.operation.lower() != "login":
+        return None
+    descriptions = {
+        100: "알 수 없는 DSM Auth 오류",
+        101: "계정 파라미터 누락",
+        400: "잘못된 계정 또는 비밀번호",
+        401: "게스트 또는 비활성 계정",
+        402: "DSM 로그인 권한 거부",
+        403: "OTP가 필요함",
+        404: "OTP 인증 실패",
+        405: "DSM App Portal 경로 오류",
+        406: "OTP 사용이 강제됨",
+        407: "DSM 자동 차단으로 로그인 제한",
+        408: "만료된 비밀번호를 변경할 수 없음",
+        409: "비밀번호 만료",
+        410: "비밀번호 변경 필요",
+        411: "계정 잠김",
+    }
+    return f"DSM Auth API {exc.code}: {descriptions.get(exc.code, '정의되지 않은 인증 오류')}"
+
+
 def _error_key(exc: Exception) -> str:
     if isinstance(exc, ValueError) and str(exc) in {
         "invalid_url",
@@ -451,6 +474,7 @@ class CCTVRelayConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="already_configured")
 
         errors: dict[str, str] = {}
+        auth_detail: str | None = None
         if user_input is not None:
             try:
                 data, camera_names = await _async_prepare_base_input(
@@ -458,6 +482,7 @@ class CCTVRelayConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
             except Exception as exc:
                 error = _error_key(exc)
+                auth_detail = _auth_error_detail(exc)
                 _log_validation_error("setup validation", error, exc)
                 errors["base"] = error
             else:
@@ -471,6 +496,9 @@ class CCTVRelayConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=_base_schema(user_input or {}),
             errors=errors,
+            description_placeholders={
+                "auth_detail": auth_detail or "DSM 연결 후 카메라 목록을 조회합니다."
+            },
         )
 
     async def async_step_cameras(
@@ -513,6 +541,7 @@ class CCTVRelayConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         entry = self._get_reconfigure_entry()
         errors: dict[str, str] = {}
+        auth_detail: str | None = None
         defaults = dict(entry.data)
         defaults.pop(CONF_WEBHOOK_ID, None)
 
@@ -523,6 +552,7 @@ class CCTVRelayConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
             except Exception as exc:
                 error = _error_key(exc)
+                auth_detail = _auth_error_detail(exc)
                 _log_validation_error("reconfigure validation", error, exc)
                 errors["base"] = error
             else:
@@ -538,4 +568,7 @@ class CCTVRelayConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="reconfigure",
             data_schema=_base_schema(user_input or defaults),
             errors=errors,
+            description_placeholders={
+                "auth_detail": auth_detail or "DSM 연결 후 카메라 목록을 다시 조회합니다."
+            },
         )

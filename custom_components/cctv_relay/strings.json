@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Set up CCTV Relay",
-        "description": "Enter the DSM connection and Telegram settings. The next step loads the Surveillance Station camera list automatically.",
+        "description": "Enter DSM connection and Telegram settings. The next step loads the Surveillance Station camera list.\n\nDiagnostic: {auth_detail}",
         "data": {
           "synology_url": "Synology DSM HTTPS URL",
           "username": "DSM relay username",
@@ -24,7 +24,7 @@
       },
       "reconfigure": {
         "title": "Reconfigure CCTV Relay",
-        "description": "Verify the DSM connection, then select Surveillance Station cameras again in the next step. Saving reloads the relay while preserving the queue and webhook ID.",
+        "description": "Verify DSM connection settings, then reselect Surveillance Station cameras.\n\nDiagnostic: {auth_detail}",
         "data": {
           "synology_url": "Synology DSM HTTPS URL",
           "username": "DSM relay username",
