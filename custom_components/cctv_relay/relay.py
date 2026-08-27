@@ -174,30 +174,37 @@ class EventStore:
                     LOG.debug("Deduplicated CCTV history id %s -> event %s", history_id, row["id"])
                     return int(row["id"]), False
             if match_window_seconds > 0:
-                # The fuzzy window exists only to correlate the webhook and
-                # Action Rule history representations of the *same* event.
-                # Never collapse two events from the same source merely because
-                # they happened close together.
+                # Surveillance Station can emit repeated motion triggers for one
+                # physical movement. Treat nearby motion events for the same
+                # camera as one burst regardless of source. For non-motion
+                # events, fuzzy matching remains cross-source only.
+                is_motion = event_type == "motion"
+                source_clause = "" if is_motion else "AND source<>?"
+                history_clause = (
+                    "" if is_motion else "AND (? IS NULL OR history_id IS NULL)"
+                )
+                params: list[Any] = [camera_key, event_type]
+                if not is_motion:
+                    params.extend([source, history_id])
+                params.extend(
+                    [
+                        event_time - match_window_seconds,
+                        event_time + match_window_seconds,
+                        event_time,
+                    ]
+                )
                 row = connection.execute(
-                    """
-                    SELECT id, history_id
+                    f"""
+                    SELECT id, history_id, event_time, source
                       FROM events
                      WHERE camera_key=? AND event_type=?
-                       AND source<>?
-                       AND (? IS NULL OR history_id IS NULL)
+                       {source_clause}
+                       {history_clause}
                        AND event_time BETWEEN ? AND ?
                      ORDER BY ABS(event_time - ?), id
                      LIMIT 1
                     """,
-                    (
-                        camera_key,
-                        event_type,
-                        source,
-                        history_id,
-                        event_time - match_window_seconds,
-                        event_time + match_window_seconds,
-                        event_time,
-                    ),
+                    tuple(params),
                 ).fetchone()
                 if row:
                     if history_id is not None and row["history_id"] is None:
@@ -209,15 +216,26 @@ class EventStore:
                             """,
                             (history_id, now, int(row["id"])),
                         )
-                    LOG.info(
-                        "Correlated CCTV %s event with existing %s event %s (delta=%.3fs)",
-                        source,
-                        "history" if source == "webhook" else "webhook",
-                        row["id"],
-                        abs(event_time - float(connection.execute(
-                            "SELECT event_time FROM events WHERE id=?", (int(row["id"]),)
-                        ).fetchone()["event_time"])),
-                    )
+                    delta = abs(event_time - float(row["event_time"]))
+                    if event_type == "motion":
+                        LOG.info(
+                            "Coalesced CCTV motion burst: %s/%s -> event %s "
+                            "(existing_source=%s, delta=%.3fs)",
+                            camera_key,
+                            source,
+                            row["id"],
+                            row["source"],
+                            delta,
+                        )
+                    else:
+                        LOG.info(
+                            "Correlated CCTV %s event with existing %s event %s "
+                            "(delta=%.3fs)",
+                            source,
+                            "history" if source == "webhook" else "webhook",
+                            row["id"],
+                            delta,
+                        )
                     return int(row["id"]), False
             cursor = connection.execute(
                 """

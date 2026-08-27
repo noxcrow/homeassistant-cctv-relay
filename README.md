@@ -10,6 +10,7 @@ Synology Surveillance Station의 Action Rule 이벤트를 Home Assistant에서 �
 - 카메라 연결 끊김/복구 알림 전송
 - Action Rule History를 이용한 누락 이벤트 복구
 - 중복 이벤트 방지 및 실패 시 자동 재시도
+- 같은 카메라에서 짧은 시간 안에 반복되는 모션 트리거를 하나의 이벤트로 통합
 
 ## 요구 사항
 

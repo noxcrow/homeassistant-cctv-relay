@@ -32,7 +32,7 @@ class EventStoreDedupTests(unittest.TestCase):
             self.assertEqual(first_id, second_id)
             store.close()
 
-    def test_same_source_motion_burst_is_not_collapsed(self):
+    def test_same_source_motion_burst_is_collapsed(self):
         with tempfile.TemporaryDirectory() as tmp:
             store = relay.EventStore(str(pathlib.Path(tmp) / "queue.db"))
             first_id, created = store.enqueue(
@@ -46,9 +46,66 @@ class EventStoreDedupTests(unittest.TestCase):
                 event_type="motion", event_time=1008.0, source="webhook",
                 match_window_seconds=15,
             )
+            self.assertFalse(created)
+            self.assertEqual(first_id, second_id)
+            store.close()
+
+    def test_same_source_history_motion_burst_is_collapsed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = relay.EventStore(str(pathlib.Path(tmp) / "queue.db"))
+            first_id, created = store.enqueue(
+                event_key="history:10", camera_key="front",
+                event_type="motion", event_time=1000.0,
+                source="action_rule_history", history_id=10,
+                match_window_seconds=15,
+            )
+            self.assertTrue(created)
+            second_id, created = store.enqueue(
+                event_key="history:11", camera_key="front",
+                event_type="motion", event_time=1008.0,
+                source="action_rule_history", history_id=11,
+                match_window_seconds=15,
+            )
+            self.assertFalse(created)
+            self.assertEqual(first_id, second_id)
+            store.close()
+
+    def test_motion_outside_burst_window_is_distinct(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = relay.EventStore(str(pathlib.Path(tmp) / "queue.db"))
+            first_id, created = store.enqueue(
+                event_key="webhook:front:motion:1000", camera_key="front",
+                event_type="motion", event_time=1000.0, source="webhook",
+                match_window_seconds=15,
+            )
+            self.assertTrue(created)
+            second_id, created = store.enqueue(
+                event_key="webhook:front:motion:1016", camera_key="front",
+                event_type="motion", event_time=1016.0, source="webhook",
+                match_window_seconds=15,
+            )
             self.assertTrue(created)
             self.assertNotEqual(first_id, second_id)
             store.close()
+
+    def test_same_source_non_motion_events_are_not_collapsed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = relay.EventStore(str(pathlib.Path(tmp) / "queue.db"))
+            first_id, created = store.enqueue(
+                event_key="webhook:front:lost:1000", camera_key="front",
+                event_type="lost", event_time=1000.0, source="webhook",
+                match_window_seconds=15,
+            )
+            self.assertTrue(created)
+            second_id, created = store.enqueue(
+                event_key="webhook:front:lost:1008", camera_key="front",
+                event_type="lost", event_time=1008.0, source="webhook",
+                match_window_seconds=15,
+            )
+            self.assertTrue(created)
+            self.assertNotEqual(first_id, second_id)
+            store.close()
+
 
 
 class DurationParsingTests(unittest.TestCase):
