@@ -44,4 +44,4 @@ Surveillance Station Action Rule의 HTTP Method는 **PUT**으로 설정합니다
 
 웹훅 ID, DSM 계정 정보, Telegram 토큰 등 인증정보를 공개 저장소나 로그에 기록하지 마십시오. 웹훅은 로컬 PUT 요청만 허용하며 호출자당 60초 120회, 활성 큐 1,000건으로 제한됩니다. 이벤트 전송 실패는 최대 20회 재시도 후 `failed`로 격리됩니다.
 
-DSM 로그인은 POST를 우선 사용하지만 일부 DSM 호환성을 위해 Auth API 400에서 GET 방식으로 1회 재시도할 수 있습니다. 이 경우 자격증명이 HTTPS query에 포함될 수 있으므로 DSM 관리자 계정 대신 Surveillance Station 최소 권한 전용 계정을 사용하십시오. 내부 주소는 HTTPS 암호화는 유지하되 인증서 검증을 우회하므로 신뢰할 수 있는 LAN에서만 사용하십시오. Home Assistant `.storage`와 `/config` 백업에는 DSM 자격증명이 포함될 수 있으므로 외부 공개/Git 커밋을 금지합니다.
+내부 주소는 HTTPS 암호화는 유지하되 인증서 검증을 우회하므로 신뢰할 수 있는 LAN에서만 사용하십시오.
