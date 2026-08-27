@@ -1,0 +1,78 @@
+{
+  "title": "CCTV Relay",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up CCTV Relay",
+        "description": "Enter all DSM, camera, and Telegram settings manually. The DSM account must be able to read recordings and Action Rule history.",
+        "data": {
+          "synology_url": "Synology DSM HTTPS URL",
+          "verify_ssl": "Verify DSM HTTPS certificate",
+          "username": "DSM relay username",
+          "password": "DSM relay password",
+          "front_camera_id": "Camera 1 ID",
+          "back_camera_id": "Camera 2 ID",
+          "telegram_notify_entity": "Telegram notify entity",
+          "pre_seconds": "Seconds before detection",
+          "post_seconds": "Seconds after detection",
+          "history_enabled": "Recover missed webhooks from Action Rule history",
+          "history_interval": "History check interval (seconds)"
+        },
+        "data_description": {
+          "synology_url": "Use the hostname on the DSM TLS certificate.",
+          "verify_ssl": "Keep enabled for a public hostname. Disable only for a trusted private DSM IP whose certificate does not contain that IP.",
+          "telegram_notify_entity": "A notify entity created by the Telegram bot integration."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure CCTV Relay",
+        "description": "Updating this entry reloads the relay and keeps the existing queue and webhook ID.",
+        "data": {
+          "synology_url": "Synology DSM HTTPS URL",
+          "verify_ssl": "Verify DSM HTTPS certificate",
+          "username": "DSM relay username",
+          "password": "DSM relay password",
+          "front_camera_id": "Camera 1 ID",
+          "back_camera_id": "Camera 2 ID",
+          "telegram_notify_entity": "Telegram notify entity",
+          "pre_seconds": "Seconds before detection",
+          "post_seconds": "Seconds after detection",
+          "history_enabled": "Recover missed webhooks from Action Rule history",
+          "history_interval": "History check interval (seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to Synology DSM.",
+      "dns_error": "HAOS cannot resolve the DSM hostname. Check local DNS or NAT loopback settings.",
+      "tls_error": "HAOS could not verify the DSM HTTPS certificate. Use the hostname covered by the certificate.",
+      "timeout_error": "The DSM connection timed out from HAOS. Check firewall, local DNS, and NAT loopback settings.",
+      "webapi_forbidden": "DSM returned HTTP 403 for WebAPI. Point this hostname to the DSM portal, not Web Station or an application portal.",
+      "invalid_webapi_response": "The address did not return a valid Synology WebAPI response.",
+      "invalid_url": "Enter a valid Synology DSM HTTPS URL.",
+      "invalid_camera_ids": "Camera 1 and Camera 2 must use different IDs.",
+      "invalid_auth": "DSM authentication failed.",
+      "otp_required": "This DSM account requires an OTP that CCTV Relay cannot submit. Use a dedicated Surveillance Station account without interactive OTP.",
+      "account_locked": "The DSM account is locked or temporarily blocked.",
+      "password_change_required": "The DSM account password has expired or must be changed before API login.",
+      "insufficient_permissions": "The DSM account does not have the required recording or Action Rule history permissions.",
+      "recording_check_failed": "Surveillance Station could not query one of the camera IDs. Check camera IDs and recording playback permissions.",
+      "history_check_failed": "Action Rule history could not be queried. Disable history recovery for a spectator account or use a Surveillance Station administrator.",
+      "missing_apis": "DSM does not expose all Synology APIs required by CCTV Relay.",
+      "synology_api_error": "Synology returned an API error. Check the Home Assistant log for the operation and code.",
+      "telegram_not_ready": "The selected Telegram notify entity or send actions are not available.",
+      "unknown": "Unexpected error. Check the Home Assistant log."
+    },
+    "abort": {
+      "already_configured": "CCTV Relay is already configured.",
+      "reconfigure_successful": "CCTV Relay was reconfigured."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "queue": {
+        "name": "Queue"
+      }
+    }
+  }
+}

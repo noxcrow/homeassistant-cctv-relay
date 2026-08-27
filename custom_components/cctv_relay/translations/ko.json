@@ -1,0 +1,78 @@
+{
+  "title": "CCTV 릴레이",
+  "config": {
+    "step": {
+      "user": {
+        "title": "CCTV 릴레이 설정",
+        "description": "DSM·카메라·Telegram 설정값을 모두 직접 입력합니다. DSM 계정에는 녹화 조회와 Action Rule 이력 조회 권한이 필요합니다.",
+        "data": {
+          "synology_url": "Synology DSM HTTPS 주소",
+          "verify_ssl": "DSM HTTPS 인증서 검증",
+          "username": "DSM 릴레이 사용자명",
+          "password": "DSM 릴레이 암호",
+          "front_camera_id": "카메라 1 ID",
+          "back_camera_id": "카메라 2 ID",
+          "telegram_notify_entity": "Telegram 알림 엔티티",
+          "pre_seconds": "감지 전 영상(초)",
+          "post_seconds": "감지 후 영상(초)",
+          "history_enabled": "Action Rule 이력에서 누락 웹훅 복구",
+          "history_interval": "이력 확인 주기(초)"
+        },
+        "data_description": {
+          "synology_url": "DSM TLS 인증서에 포함된 호스트 이름을 사용합니다.",
+          "verify_ssl": "공인 호스트 이름은 켜 둡니다. 인증서에 IP가 없는 신뢰 가능한 DSM 내부 IP를 사용할 때만 끕니다.",
+          "telegram_notify_entity": "Telegram bot 통합이 만든 notify 엔티티를 선택합니다."
+        }
+      },
+      "reconfigure": {
+        "title": "CCTV 릴레이 재구성",
+        "description": "저장하면 릴레이를 다시 불러옵니다. 기존 대기열과 웹훅 ID는 유지됩니다.",
+        "data": {
+          "synology_url": "Synology DSM HTTPS 주소",
+          "verify_ssl": "DSM HTTPS 인증서 검증",
+          "username": "DSM 릴레이 사용자명",
+          "password": "DSM 릴레이 암호",
+          "front_camera_id": "카메라 1 ID",
+          "back_camera_id": "카메라 2 ID",
+          "telegram_notify_entity": "Telegram 알림 엔티티",
+          "pre_seconds": "감지 전 영상(초)",
+          "post_seconds": "감지 후 영상(초)",
+          "history_enabled": "Action Rule 이력에서 누락 웹훅 복구",
+          "history_interval": "이력 확인 주기(초)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Synology DSM에 연결할 수 없습니다.",
+      "dns_error": "HAOS에서 DSM 호스트 이름을 확인할 수 없습니다. 로컬 DNS 또는 NAT 루프백 설정을 확인하세요.",
+      "tls_error": "HAOS에서 DSM HTTPS 인증서를 검증하지 못했습니다. 인증서에 포함된 호스트 이름을 사용하세요.",
+      "timeout_error": "HAOS에서 DSM 연결 시간이 초과되었습니다. 방화벽, 로컬 DNS 및 NAT 루프백 설정을 확인하세요.",
+      "webapi_forbidden": "DSM WebAPI가 HTTP 403을 반환했습니다. 이 호스트를 Web Station이나 응용 프로그램 포털이 아닌 DSM 포털에 연결하세요.",
+      "invalid_webapi_response": "입력한 주소가 올바른 Synology WebAPI 응답을 반환하지 않았습니다.",
+      "invalid_url": "올바른 Synology DSM HTTPS 주소를 입력하세요.",
+      "invalid_camera_ids": "카메라 1과 카메라 2의 ID는 서로 달라야 합니다.",
+      "invalid_auth": "DSM 인증에 실패했습니다.",
+      "otp_required": "이 DSM 계정은 CCTV Relay가 입력할 수 없는 OTP를 요구합니다. 대화형 OTP가 없는 Surveillance Station 전용 계정을 사용하세요.",
+      "account_locked": "DSM 계정이 잠겼거나 일시적으로 차단되었습니다.",
+      "password_change_required": "DSM 계정 암호가 만료되었거나 API 로그인 전에 암호를 변경해야 합니다.",
+      "insufficient_permissions": "DSM 계정에 녹화 또는 Action Rule 이력 조회 권한이 없습니다.",
+      "recording_check_failed": "Surveillance Station에서 카메라 ID를 조회하지 못했습니다. 카메라 ID와 녹화 재생 권한을 확인하세요.",
+      "history_check_failed": "Action Rule 이력을 조회하지 못했습니다. 감시자 계정은 이력 복구를 끄거나 Surveillance Station 관리자 계정을 사용하세요.",
+      "missing_apis": "DSM에서 CCTV Relay에 필요한 Synology API를 모두 제공하지 않습니다.",
+      "synology_api_error": "Synology API 오류가 발생했습니다. Home Assistant 로그에서 작업명과 오류 코드를 확인하세요.",
+      "telegram_not_ready": "선택한 Telegram 알림 엔티티 또는 전송 액션을 사용할 수 없습니다.",
+      "unknown": "예상하지 못한 오류입니다. Home Assistant 로그를 확인하세요."
+    },
+    "abort": {
+      "already_configured": "CCTV 릴레이가 이미 설정되어 있습니다.",
+      "reconfigure_successful": "CCTV 릴레이 구성을 변경했습니다."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "queue": {
+        "name": "대기열"
+      }
+    }
+  }
+}

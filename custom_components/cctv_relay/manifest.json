@@ -1,0 +1,19 @@
+{
+  "domain": "cctv_relay",
+  "name": "CCTV Relay",
+  "codeowners": [
+    "@noxcrow"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "telegram_bot",
+    "webhook"
+  ],
+  "documentation": "https://github.com/noxcrow/homeassistant-cctv-relay",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "2.1.2",
+  "issue_tracker": "https://github.com/noxcrow/homeassistant-cctv-relay/issues"
+}

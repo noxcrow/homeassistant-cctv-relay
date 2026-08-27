@@ -1,0 +1,28 @@
+# Home Assistant secrets / runtime state
+secrets.yaml
+.storage/
+.cloud/
+.homeassistant_version
+*.db
+*.db-shm
+*.db-wal
+*.log
+*.log.*
+backups/
+tts/
+deps/
+__pycache__/
+*.pyc
+
+# Certificates / keys / environment
+*.pem
+*.key
+*.crt
+.env
+.env.*
+!.env.example
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
