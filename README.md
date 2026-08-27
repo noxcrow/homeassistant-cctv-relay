@@ -17,6 +17,7 @@ Synology Surveillance Station의 Action Rule 이벤트를 Home Assistant에서 �
 - Home Assistant
 - HACS
 - Synology Surveillance Station
+- Home Assistant의 **Synology DSM 통합은 필요하지 않음** (CCTV Relay가 DSM Surveillance Station API에 직접 연결)
 - Telegram Bot 통합
 - Home Assistant에서 Synology NAS에 접근 가능한 네트워크 환경
 - Synology Surveillance Station에서 녹화 조회 및 Action Rule History 조회 권한이 있는 계정
