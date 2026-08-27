@@ -57,12 +57,13 @@ class CCTVRelayQueueSensor(SensorEntity):
         counts = summary.get("counts", {})
         self._attr_native_value = sum(
             int(counts.get(status, 0))
-            for status in ("pending", "retry", "processing")
+            for status in ("pending", "retry", "processing", "failed")
         )
         attributes: dict[str, Any] = {
             "pending": int(counts.get("pending", 0)),
             "retry": int(counts.get("retry", 0)),
             "processing": int(counts.get("processing", 0)),
+            "failed": int(counts.get("failed", 0)),
             "sent": int(counts.get("sent", 0)),
         }
         if (oldest := summary.get("oldest_unsent_epoch")) is not None:

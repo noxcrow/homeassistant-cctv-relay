@@ -109,6 +109,56 @@ class EventStoreDedupTests(unittest.TestCase):
 
 
 
+class EventStoreSafetyTests(unittest.TestCase):
+    def test_active_queue_limit_rejects_new_unique_event(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = relay.EventStore(str(pathlib.Path(tmp) / "queue.db"))
+            store.enqueue(
+                event_key="one", camera_key="7", event_type="lost",
+                event_time=1000.0, source="webhook", max_active_events=1,
+            )
+            with self.assertRaises(relay.QueueFullError):
+                store.enqueue(
+                    event_key="two", camera_key="7", event_type="lost",
+                    event_time=1001.0, source="webhook", max_active_events=1,
+                )
+            store.close()
+
+    def test_deduplicated_event_is_allowed_when_queue_is_full(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = relay.EventStore(str(pathlib.Path(tmp) / "queue.db"))
+            first_id, _ = store.enqueue(
+                event_key="same", camera_key="7", event_type="motion",
+                event_time=1000.0, source="webhook", max_active_events=1,
+            )
+            second_id, created = store.enqueue(
+                event_key="same", camera_key="7", event_type="motion",
+                event_time=1000.0, source="webhook", max_active_events=1,
+            )
+            self.assertFalse(created)
+            self.assertEqual(first_id, second_id)
+            store.close()
+
+    def test_failed_event_is_not_claimed_again(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = relay.EventStore(str(pathlib.Path(tmp) / "queue.db"))
+            event_id, _ = store.enqueue(
+                event_key="fail", camera_key="7", event_type="lost",
+                event_time=1000.0, source="webhook",
+            )
+            claimed = store.claim_next("7")
+            self.assertEqual(claimed["id"], event_id)
+            store.mark_failed(event_id, "permanent error")
+            self.assertIsNone(store.claim_next("7"))
+            self.assertEqual(store.summary()["counts"].get("failed"), 1)
+            store.close()
+
+    def test_parse_event_time_rejects_far_future_timestamp(self):
+        with patch.object(relay.time, "time", return_value=1_700_000_000.0):
+            with self.assertRaises(ValueError):
+                relay.parse_event_time(1_700_000_301.0)
+
+
 class CameraConfigTests(unittest.TestCase):
     def test_uses_dsm_camera_name(self):
         camera = relay.CameraConfig(

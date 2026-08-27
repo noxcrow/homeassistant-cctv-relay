@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import defaultdict, deque
 import dataclasses
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
@@ -49,18 +50,23 @@ from .const import (
     DEFAULT_HISTORY_PAGE_SIZE,
     DEFAULT_INDEX_GRACE_SECONDS,
     DEFAULT_MATCH_WINDOW,
+    DEFAULT_MAX_ACTIVE_EVENTS,
+    DEFAULT_MAX_RETRY_ATTEMPTS,
     DEFAULT_MAX_CLIP_MEGABYTES,
     DEFAULT_POST_SECONDS,
     DEFAULT_PRE_SECONDS,
     DEFAULT_RETRY_BASE_SECONDS,
     DEFAULT_RETRY_MAX_SECONDS,
     DEFAULT_SENT_RETENTION_DAYS,
+    DEFAULT_WEBHOOK_RATE_LIMIT,
+    DEFAULT_WEBHOOK_RATE_WINDOW_SECONDS,
     DEFAULT_VERIFY_SSL,
     SIGNAL_QUEUE_UPDATED,
 )
 from .relay import (
     CameraConfig,
     EventStore,
+    QueueFullError,
     RelayError,
     SynologyClient,
     normalize_export,
@@ -125,6 +131,7 @@ class CCTVRelayRuntime:
         self._started = False
         self._temp_root = pathlib.Path(hass.config.path("temp", "cctv_relay"))
         self._signal = f"{SIGNAL_QUEUE_UPDATED}_{entry.entry_id}"
+        self._webhook_rate: dict[str, deque[float]] = defaultdict(deque)
 
     @property
     def signal(self) -> str:
@@ -276,6 +283,19 @@ class CCTVRelayRuntime:
         self._wake.set()
         async_dispatcher_send(self.hass, self._signal)
 
+    def _webhook_rate_allowed(self, request: web.Request) -> bool:
+        """Apply a lightweight per-peer sliding-window webhook rate limit."""
+        peer = request.remote or "unknown"
+        now = time.monotonic()
+        bucket = self._webhook_rate[peer]
+        cutoff = now - DEFAULT_WEBHOOK_RATE_WINDOW_SECONDS
+        while bucket and bucket[0] <= cutoff:
+            bucket.popleft()
+        if len(bucket) >= DEFAULT_WEBHOOK_RATE_LIMIT:
+            return False
+        bucket.append(now)
+        return True
+
     async def async_handle_webhook(
         self,
         _hass: HomeAssistant,
@@ -283,6 +303,9 @@ class CCTVRelayRuntime:
         request: web.Request,
     ) -> web.Response:
         """Validate and durably enqueue a local DSM Action Rule webhook."""
+        if not self._webhook_rate_allowed(request):
+            return web.json_response({"error": "rate limit exceeded"}, status=429)
+
         content_length = request.content_length
         if content_length is not None and (
             content_length < 0 or content_length > MAX_WEBHOOK_BODY_BYTES
@@ -324,10 +347,18 @@ class CCTVRelayRuntime:
         except ValueError as exc:
             return web.json_response({"error": str(exc)}, status=400)
 
-        external_id = str(payload.get("event_id", "")).strip()
+        external_id = str(payload.get("event_id", "")).strip()[:200]
+        stored_payload = {
+            "camera": camera_key,
+            "event_type": event_type,
+        }
+        if external_id:
+            stored_payload["event_id"] = external_id
+        if payload.get("event_time") not in (None, ""):
+            stored_payload["event_time"] = event_time
         if external_id:
             event_key = (
-                f"webhook:{camera_key}:{event_type}:{external_id[:200]}"
+                f"webhook:{camera_key}:{event_type}:{external_id}"
             )
         else:
             event_key = f"webhook:{camera_key}:{event_type}:{int(event_time)}"
@@ -340,7 +371,8 @@ class CCTVRelayRuntime:
                 event_type=event_type,
                 event_time=event_time,
                 source="webhook",
-                payload=payload,
+                payload=stored_payload,
+                max_active_events=DEFAULT_MAX_ACTIVE_EVENTS,
                 # Use the same correlation window as Action Rule history.
                 # EventStore applies this fuzzy match only across sources, so
                 # legitimate same-source motion bursts are not collapsed.
@@ -348,6 +380,9 @@ class CCTVRelayRuntime:
                     self.data.get(CONF_MATCH_WINDOW, DEFAULT_MATCH_WINDOW)
                 ),
             )
+        except QueueFullError:
+            _LOGGER.warning("Rejected CCTV webhook because the active queue is full")
+            return web.json_response({"error": "queue full"}, status=429)
         except (sqlite3.Error, RuntimeError):
             _LOGGER.exception("Could not persist CCTV webhook")
             return web.json_response({"error": "queue unavailable"}, status=503)
@@ -383,6 +418,25 @@ class CCTVRelayRuntime:
             except Exception as exc:  # the durable queue must survive every failure
                 requested = exc.retry_after if isinstance(exc, RelayError) else None
                 attempts = int(event["attempts"]) + 1
+                if attempts >= DEFAULT_MAX_RETRY_ATTEMPTS:
+                    await self._async_db(
+                        store.mark_failed,
+                        int(event["id"]),
+                        str(exc) or type(exc).__name__,
+                    )
+                    _LOGGER.error(
+                        "CCTV event %s (%s/%s) moved to failed after %d attempts: %s",
+                        event["id"],
+                        camera_key,
+                        event["event_type"],
+                        attempts,
+                        str(exc)[:500],
+                    )
+                    await self._async_db(
+                        store.cleanup_terminal, DEFAULT_SENT_RETENTION_DAYS
+                    )
+                    self._queue_changed()
+                    continue
                 exponential = DEFAULT_RETRY_BASE_SECONDS * (
                     2 ** min(attempts, 12)
                 )
@@ -407,6 +461,9 @@ class CCTVRelayRuntime:
                 )
             else:
                 await self._async_db(store.mark_sent, int(event["id"]), None)
+                await self._async_db(
+                    store.cleanup_terminal, DEFAULT_SENT_RETENTION_DAYS
+                )
                 _LOGGER.info(
                     "CCTV event %s (%s/%s) sent",
                     event["id"],
@@ -460,8 +517,6 @@ class CCTVRelayRuntime:
             message = camera.lost_message
         elif event_type == "restored":
             message = camera.restored_message
-        elif event_type == "test":
-            message = f"CCTV 릴레이 테스트가 정상 처리되었습니다. ({camera.key})"
         else:
             raise RelayError(f"unsupported event type: {event_type}")
 
@@ -591,6 +646,7 @@ class CCTVRelayRuntime:
                     "level": row.get("level"),
                 },
                 match_window_seconds=match_window,
+                max_active_events=DEFAULT_MAX_ACTIVE_EVENTS,
             )
             created_count += int(created)
 
@@ -598,7 +654,7 @@ class CCTVRelayRuntime:
         await self._async_db(store.set_metadata, "history_last_success_epoch", now)
         await self._async_db(store.set_metadata, "history_last_error", "")
         removed = await self._async_db(
-            store.cleanup_sent, DEFAULT_SENT_RETENTION_DAYS
+            store.cleanup_terminal, DEFAULT_SENT_RETENTION_DAYS
         )
         if created_count:
             self._wake.set()

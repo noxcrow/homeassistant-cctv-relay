@@ -38,6 +38,10 @@ class RelayError(RuntimeError):
         self.retry_after = retry_after
 
 
+class QueueFullError(RelayError):
+    """Raised when the active durable event queue reaches its safety limit."""
+
+
 class SynologyAPIError(RelayError):
     def __init__(self, code: int, operation: str):
         super().__init__(f"Synology {operation} failed with API code {code}")
@@ -157,6 +161,7 @@ class EventStore:
         payload: dict[str, Any] | None = None,
         history_id: int | None = None,
         match_window_seconds: int = 0,
+        max_active_events: int | None = None,
     ) -> tuple[int, bool]:
         now = time.time()
         payload_json = json.dumps(
@@ -240,6 +245,17 @@ class EventStore:
                             delta,
                         )
                     return int(row["id"]), False
+            if max_active_events is not None and max_active_events > 0:
+                active = connection.execute(
+                    """
+                    SELECT COUNT(*) AS count FROM events
+                     WHERE status IN ('pending', 'retry', 'processing')
+                    """
+                ).fetchone()["count"]
+                if int(active) >= max_active_events:
+                    raise QueueFullError(
+                        f"active event queue reached safety limit ({max_active_events})"
+                    )
             cursor = connection.execute(
                 """
                 INSERT INTO events (
@@ -317,6 +333,21 @@ class EventStore:
                 (next_attempt, safe_error, now, event_id),
             )
 
+    def mark_failed(self, event_id: int, error: str) -> None:
+        """Move an event to dead-letter state after bounded retries."""
+        safe_error = error.replace("\n", " ")[:1000]
+        now = time.time()
+        with self._lock:
+            self._connection.execute(
+                """
+                UPDATE events
+                   SET status='failed', attempts=attempts+1, claimed_at=NULL,
+                       last_error=?, updated_at=?
+                 WHERE id=?
+                """,
+                (safe_error, now, event_id),
+            )
+
     def set_metadata(self, key: str, value: str) -> None:
         now = time.time()
         with self._lock:
@@ -355,11 +386,17 @@ class EventStore:
             "metadata": metadata,
         }
 
-    def cleanup_sent(self, retention_days: int) -> int:
+    def cleanup_terminal(self, retention_days: int) -> int:
+        """Remove old sent and dead-letter events after the retention period."""
         cutoff = time.time() - retention_days * 86400
         with self._lock:
             cursor = self._connection.execute(
-                "DELETE FROM events WHERE status='sent' AND sent_at < ?", (cutoff,)
+                """
+                DELETE FROM events
+                 WHERE (status='sent' AND sent_at < ?)
+                    OR (status='failed' AND updated_at < ?)
+                """,
+                (cutoff, cutoff),
             )
             return int(cursor.rowcount)
 
