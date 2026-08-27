@@ -4,14 +4,12 @@
     "step": {
       "user": {
         "title": "Set up CCTV Relay",
-        "description": "Enter all DSM, camera, and Telegram settings manually. The DSM account must be able to read recordings and Action Rule history.",
+        "description": "Enter the DSM connection and Telegram settings. The next step loads the Surveillance Station camera list automatically.",
         "data": {
           "synology_url": "Synology DSM HTTPS URL",
           "verify_ssl": "Verify DSM HTTPS certificate",
           "username": "DSM relay username",
           "password": "DSM relay password",
-          "front_camera_id": "Camera 1 ID",
-          "back_camera_id": "Camera 2 ID",
           "telegram_notify_entity": "Telegram notify entity",
           "pre_seconds": "Seconds before detection",
           "post_seconds": "Seconds after detection",
@@ -26,19 +24,25 @@
       },
       "reconfigure": {
         "title": "Reconfigure CCTV Relay",
-        "description": "Updating this entry reloads the relay and keeps the existing queue and webhook ID.",
+        "description": "Verify the DSM connection, then select Surveillance Station cameras again in the next step. Saving reloads the relay while preserving the queue and webhook ID.",
         "data": {
           "synology_url": "Synology DSM HTTPS URL",
           "verify_ssl": "Verify DSM HTTPS certificate",
           "username": "DSM relay username",
           "password": "DSM relay password",
-          "front_camera_id": "Camera 1 ID",
-          "back_camera_id": "Camera 2 ID",
           "telegram_notify_entity": "Telegram notify entity",
           "pre_seconds": "Seconds before detection",
           "post_seconds": "Seconds after detection",
           "history_enabled": "Recover missed webhooks from Action Rule history",
           "history_interval": "History check interval (seconds)"
+        }
+      },
+      "cameras": {
+        "title": "Select cameras",
+        "description": "Choose two cameras loaded from Surveillance Station.",
+        "data": {
+          "front_camera_id": "Camera 1",
+          "back_camera_id": "Camera 2"
         }
       }
     },
@@ -56,13 +60,14 @@
       "account_locked": "The DSM account is locked or temporarily blocked.",
       "password_change_required": "The DSM account password has expired or must be changed before API login.",
       "insufficient_permissions": "The DSM account does not have the required recording or Action Rule history permissions.",
-      "recording_check_failed": "Surveillance Station could not query one of the camera IDs. Check camera IDs and recording playback permissions.",
+      "recording_check_failed": "Recording access failed for a selected Surveillance Station camera. Check recording playback permissions.",
       "history_check_failed": "Action Rule history could not be queried. Disable history recovery for a spectator account or use a Surveillance Station administrator.",
       "missing_apis": "DSM does not expose all Synology APIs required by CCTV Relay.",
       "synology_api_error": "Synology returned an API error. Check the Home Assistant log for the operation and code.",
       "telegram_not_ready": "The selected Telegram notify entity or send actions are not available.",
       "unknown": "Unexpected error. Check the Home Assistant log.",
-      "camera_not_found": "One or more configured camera IDs were not found in Surveillance Station."
+      "camera_not_found": "One or more selected cameras were not found in Surveillance Station. Reload the camera list and select again.",
+      "not_enough_cameras": "Surveillance Station must provide at least two accessible cameras."
     },
     "abort": {
       "already_configured": "CCTV Relay is already configured.",

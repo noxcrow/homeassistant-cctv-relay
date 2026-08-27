@@ -8,7 +8,7 @@ Home Assistant에서 Synology Surveillance Station의 Action Rule 이벤트를 �
 - Telegram Bot 통합과 `notify.*` 엔티티
 - 접근 가능한 Synology DSM
 - Surveillance Station 녹화 조회 권한이 있는 DSM 계정
-- 사용할 Surveillance Station 카메라 ID 2개
+- 사용할 Surveillance Station 카메라 2대
 - 누락 이벤트 복구를 사용할 경우 Action Rule History 조회 권한
 
 ## 설치
@@ -20,13 +20,13 @@ Home Assistant에서 Synology Surveillance Station의 Action Rule 이벤트를 �
 - Synology DSM 주소
 - SSL 인증서 검증 여부
 - DSM 사용자 이름과 비밀번호
-- 카메라 1 ID
-- 카메라 2 ID
+- Surveillance Station에서 조회된 목록의 카메라 1
+- Surveillance Station에서 조회된 목록의 카메라 2
 - Telegram Notify 엔티티
 - 이벤트 전·후 영상 포함 시간
 - Action Rule History 복구 여부와 확인 주기
 
-카메라 1/2는 위치를 의미하지 않으며 Surveillance Station에 등록된 원하는 카메라 ID를 사용할 수 있습니다.
+카메라 1/2는 위치를 의미하지 않으며 DSM에서 자동 조회된 Surveillance Station 카메라 목록에서 원하는 두 대를 선택합니다.
 
 ## Action Rule
 

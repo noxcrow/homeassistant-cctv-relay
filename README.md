@@ -56,15 +56,15 @@ Home Assistant 재시작 후:
 - Synology DSM 주소
 - SSL 인증서 검증 여부
 - Synology 사용자 이름 / 비밀번호
-- 카메라 1 ID
-- 카메라 2 ID
+- Surveillance Station에서 조회된 카메라 목록에서 카메라 1 선택
+- Surveillance Station에서 조회된 카메라 목록에서 카메라 2 선택
 - Telegram Notify 엔티티
 - 영상 시작 전 포함 시간
 - 영상 종료 후 포함 시간
 - Action Rule History 복구 사용 여부
 - History 확인 주기
 
-카메라 1/2는 위치를 의미하지 않습니다. Surveillance Station에 등록된 원하는 두 카메라의 ID를 각각 지정하면 됩니다. Telegram 알림에는 Surveillance Station에 설정된 실제 카메라명이 표시됩니다.
+카메라 1/2는 위치를 의미하지 않습니다. DSM 연결정보를 입력하면 Surveillance Station의 카메라 목록을 자동으로 조회하며, 표시되는 카메라명과 ID를 확인해 원하는 두 대를 선택하면 됩니다. Telegram 알림에는 Surveillance Station에 설정된 실제 카메라명이 표시됩니다.
 
 ## Synology Action Rule 설정
 
@@ -80,8 +80,8 @@ Surveillance Station의 Action Rule에서 Home Assistant CCTV Relay 웹훅 주�
 
 새 설치에서는 아래 값을 권장합니다. 각 값은 통합 설정에서 입력한 Surveillance Station 카메라 ID에 연결됩니다.
 
-- `camera1` : 설정한 **카메라 1 ID**
-- `camera2` : 설정한 **카메라 2 ID**
+- `camera1` : 목록에서 **카메라 1**로 선택한 DSM 카메라
+- `camera2` : 목록에서 **카메라 2**로 선택한 DSM 카메라
 
 기존 설치 호환을 위해 `front`/`back` 값도 계속 사용할 수 있습니다.
 

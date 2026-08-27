@@ -4,14 +4,12 @@
     "step": {
       "user": {
         "title": "CCTV 릴레이 설정",
-        "description": "DSM·카메라·Telegram 설정값을 모두 직접 입력합니다. DSM 계정에는 녹화 조회와 Action Rule 이력 조회 권한이 필요합니다.",
+        "description": "DSM 연결정보와 Telegram 설정을 입력하면 다음 단계에서 Surveillance Station 카메라 목록을 자동으로 불러옵니다. DSM 계정에는 필요한 Surveillance Station 조회 권한이 있어야 합니다.",
         "data": {
           "synology_url": "Synology DSM HTTPS 주소",
           "verify_ssl": "DSM HTTPS 인증서 검증",
           "username": "DSM 릴레이 사용자명",
           "password": "DSM 릴레이 암호",
-          "front_camera_id": "카메라 1 ID",
-          "back_camera_id": "카메라 2 ID",
           "telegram_notify_entity": "Telegram 알림 엔티티",
           "pre_seconds": "감지 전 영상(초)",
           "post_seconds": "감지 후 영상(초)",
@@ -26,19 +24,25 @@
       },
       "reconfigure": {
         "title": "CCTV 릴레이 재구성",
-        "description": "저장하면 릴레이를 다시 불러옵니다. 기존 대기열과 웹훅 ID는 유지됩니다.",
+        "description": "DSM 연결정보를 확인한 뒤 다음 단계에서 Surveillance Station 카메라를 다시 선택할 수 있습니다. 저장하면 릴레이를 다시 불러오며 기존 대기열과 웹훅 ID는 유지됩니다.",
         "data": {
           "synology_url": "Synology DSM HTTPS 주소",
           "verify_ssl": "DSM HTTPS 인증서 검증",
           "username": "DSM 릴레이 사용자명",
           "password": "DSM 릴레이 암호",
-          "front_camera_id": "카메라 1 ID",
-          "back_camera_id": "카메라 2 ID",
           "telegram_notify_entity": "Telegram 알림 엔티티",
           "pre_seconds": "감지 전 영상(초)",
           "post_seconds": "감지 후 영상(초)",
           "history_enabled": "Action Rule 이력에서 누락 웹훅 복구",
           "history_interval": "이력 확인 주기(초)"
+        }
+      },
+      "cameras": {
+        "title": "카메라 선택",
+        "description": "Surveillance Station에서 조회한 카메라 중 사용할 두 대를 선택하세요.",
+        "data": {
+          "front_camera_id": "카메라 1",
+          "back_camera_id": "카메라 2"
         }
       }
     },
@@ -56,13 +60,14 @@
       "account_locked": "DSM 계정이 잠겼거나 일시적으로 차단되었습니다.",
       "password_change_required": "DSM 계정 암호가 만료되었거나 API 로그인 전에 암호를 변경해야 합니다.",
       "insufficient_permissions": "DSM 계정에 녹화 또는 Action Rule 이력 조회 권한이 없습니다.",
-      "recording_check_failed": "Surveillance Station에서 카메라 ID를 조회하지 못했습니다. 카메라 ID와 녹화 재생 권한을 확인하세요.",
+      "recording_check_failed": "선택한 Surveillance Station 카메라의 녹화 조회에 실패했습니다. 녹화 재생/조회 권한을 확인하세요.",
       "history_check_failed": "Action Rule 이력을 조회하지 못했습니다. 감시자 계정은 이력 복구를 끄거나 Surveillance Station 관리자 계정을 사용하세요.",
       "missing_apis": "DSM에서 CCTV Relay에 필요한 Synology API를 모두 제공하지 않습니다.",
       "synology_api_error": "Synology API 오류가 발생했습니다. Home Assistant 로그에서 작업명과 오류 코드를 확인하세요.",
       "telegram_not_ready": "선택한 Telegram 알림 엔티티 또는 전송 액션을 사용할 수 없습니다.",
       "unknown": "예상하지 못한 오류입니다. Home Assistant 로그를 확인하세요.",
-      "camera_not_found": "설정한 카메라 ID 중 하나 이상을 Surveillance Station에서 찾을 수 없습니다."
+      "camera_not_found": "선택한 카메라 중 하나 이상을 Surveillance Station에서 찾을 수 없습니다. 카메라 목록을 다시 불러와 선택하세요.",
+      "not_enough_cameras": "Surveillance Station에서 접근 가능한 카메라가 최소 2대 필요합니다."
     },
     "abort": {
       "already_configured": "CCTV 릴레이가 이미 설정되어 있습니다.",

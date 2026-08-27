@@ -19,6 +19,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.selector import (
     EntitySelector,
     EntitySelectorConfig,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -58,7 +61,7 @@ def _required_field(
     return vol.Required(key)
 
 
-def _schema(defaults: dict[str, Any]) -> vol.Schema:
+def _base_schema(defaults: dict[str, Any]) -> vol.Schema:
     return vol.Schema(
         {
             _required_field(
@@ -79,12 +82,6 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
                     autocomplete="current-password",
                 )
             ),
-            _required_field(
-                defaults, CONF_FRONT_CAMERA_ID
-            ): vol.All(vol.Coerce(int), vol.Range(min=1)),
-            _required_field(
-                defaults, CONF_BACK_CAMERA_ID
-            ): vol.All(vol.Coerce(int), vol.Range(min=1)),
             _required_field(
                 defaults, CONF_TELEGRAM_NOTIFY_ENTITY
             ): EntitySelector(
@@ -116,46 +113,85 @@ def _schema(defaults: dict[str, Any]) -> vol.Schema:
     )
 
 
-def _validate_dsm(data: dict[str, Any]) -> None:
-    client = SynologyClient(
+def _camera_schema(
+    defaults: dict[str, Any], camera_names: dict[int, str]
+) -> vol.Schema:
+    options = [
+        {"value": str(camera_id), "label": f"{name} (ID {camera_id})"}
+        for camera_id, name in sorted(
+            camera_names.items(), key=lambda item: item[1].casefold()
+        )
+    ]
+
+    def _camera_field(key: str) -> vol.Marker:
+        current = defaults.get(key)
+        if current is not None and int(current) in camera_names:
+            return vol.Required(key, default=str(int(current)))
+        return vol.Required(key)
+
+    selector = SelectSelector(
+        SelectSelectorConfig(
+            options=options,
+            mode=SelectSelectorMode.DROPDOWN,
+            custom_value=False,
+        )
+    )
+    return vol.Schema(
+        {
+            _camera_field(CONF_FRONT_CAMERA_ID): selector,
+            _camera_field(CONF_BACK_CAMERA_ID): selector,
+        }
+    )
+
+
+def _build_client(data: dict[str, Any]) -> SynologyClient:
+    return SynologyClient(
         str(data[CONF_SYNOLOGY_URL]),
         None,
         DEFAULT_DSM_TIMEOUT_SECONDS,
         DEFAULT_EXPORT_TIMEOUT_SECONDS,
         bool(data[CONF_VERIFY_SSL]),
     )
+
+
+def _load_dsm_cameras(data: dict[str, Any]) -> dict[int, str]:
+    client = _build_client(data)
     username = str(data[CONF_USERNAME])
     password = str(data[CONF_PASSWORD])
-    now = int(time.time())
     client.discover()
     camera_names = client.camera_names(username, password)
-    selected_ids = {
-        int(data[CONF_FRONT_CAMERA_ID]),
-        int(data[CONF_BACK_CAMERA_ID]),
-    }
-    if not selected_ids.issubset(camera_names):
-        raise ValueError("camera_not_found")
-    client.list_recordings(
-        username,
-        password,
-        int(data[CONF_FRONT_CAMERA_ID]),
-        now - 3600,
-        now,
-    )
-    client.list_recordings(
-        username,
-        password,
-        int(data[CONF_BACK_CAMERA_ID]),
-        now - 3600,
-        now,
-    )
+    if len(camera_names) < 2:
+        raise ValueError("not_enough_cameras")
     if bool(data[CONF_HISTORY_ENABLED]):
         client.list_history(username, password, DEFAULT_HISTORY_PAGE_SIZE)
+    return camera_names
 
 
-async def _async_validate_input(
+def _validate_selected_cameras(data: dict[str, Any]) -> None:
+    front_id = int(data[CONF_FRONT_CAMERA_ID])
+    back_id = int(data[CONF_BACK_CAMERA_ID])
+    if front_id == back_id:
+        raise ValueError("invalid_camera_ids")
+
+    client = _build_client(data)
+    username = str(data[CONF_USERNAME])
+    password = str(data[CONF_PASSWORD])
+    camera_names = client.camera_names(username, password)
+    if not {front_id, back_id}.issubset(camera_names):
+        raise ValueError("camera_not_found")
+
+    now = int(time.time())
+    client.list_recordings(
+        username, password, front_id, now - 3600, now
+    )
+    client.list_recordings(
+        username, password, back_id, now - 3600, now
+    )
+
+
+async def _async_prepare_base_input(
     hass: HomeAssistant, user_input: dict[str, Any]
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], dict[int, str]]:
     data = dict(user_input)
     base_url = str(data[CONF_SYNOLOGY_URL]).strip().rstrip("/")
     parsed = urllib.parse.urlparse(base_url)
@@ -166,8 +202,6 @@ async def _async_validate_input(
         or parsed.password is not None
     ):
         raise ValueError("invalid_url")
-    if int(data[CONF_FRONT_CAMERA_ID]) == int(data[CONF_BACK_CAMERA_ID]):
-        raise ValueError("invalid_camera_ids")
 
     notify_entity = str(data[CONF_TELEGRAM_NOTIFY_ENTITY]).strip().lower()
     if (
@@ -185,7 +219,17 @@ async def _async_validate_input(
     if not data[CONF_USERNAME] or not data[CONF_PASSWORD]:
         raise SynologyAPIError(400, "login")
 
-    await hass.async_add_executor_job(_validate_dsm, data)
+    camera_names = await hass.async_add_executor_job(_load_dsm_cameras, data)
+    return data, camera_names
+
+
+async def _async_validate_camera_selection(
+    hass: HomeAssistant, base_data: dict[str, Any], user_input: dict[str, Any]
+) -> dict[str, Any]:
+    data = dict(base_data)
+    data[CONF_FRONT_CAMERA_ID] = int(user_input[CONF_FRONT_CAMERA_ID])
+    data[CONF_BACK_CAMERA_ID] = int(user_input[CONF_BACK_CAMERA_ID])
+    await hass.async_add_executor_job(_validate_selected_cameras, data)
     return data
 
 
@@ -194,6 +238,7 @@ def _error_key(exc: Exception) -> str:
         "invalid_url",
         "invalid_camera_ids",
         "camera_not_found",
+        "not_enough_cameras",
         "telegram_not_ready",
     }:
         return str(exc)
@@ -306,6 +351,12 @@ class CCTVRelayConfigFlow(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    def __init__(self) -> None:
+        self._pending_data: dict[str, Any] = {}
+        self._camera_names: dict[int, str] = {}
+        self._camera_defaults: dict[str, Any] = {}
+        self._reconfigure = False
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
@@ -315,18 +366,58 @@ class CCTVRelayConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             try:
-                data = await _async_validate_input(self.hass, user_input)
+                data, camera_names = await _async_prepare_base_input(
+                    self.hass, user_input
+                )
             except Exception as exc:
                 error = _error_key(exc)
                 _log_validation_error("setup validation", error, exc)
                 errors["base"] = error
             else:
+                self._pending_data = data
+                self._camera_names = camera_names
+                self._camera_defaults = {}
+                self._reconfigure = False
+                return await self.async_step_cameras()
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=_base_schema(user_input or {}),
+            errors=errors,
+        )
+
+    async def async_step_cameras(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if not self._pending_data or not self._camera_names:
+            return self.async_abort(reason="cannot_connect")
+
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                data = await _async_validate_camera_selection(
+                    self.hass, self._pending_data, user_input
+                )
+            except Exception as exc:
+                error = _error_key(exc)
+                _log_validation_error("camera selection", error, exc)
+                errors["base"] = error
+                self._camera_defaults = dict(user_input)
+            else:
+                if self._reconfigure:
+                    entry = self._get_reconfigure_entry()
+                    data[CONF_WEBHOOK_ID] = entry.data[CONF_WEBHOOK_ID]
+                    return self.async_update_reload_and_abort(
+                        entry, data_updates=data
+                    )
                 data[CONF_WEBHOOK_ID] = webhook.async_generate_id()
                 return self.async_create_entry(title="CCTV Relay", data=data)
 
         return self.async_show_form(
-            step_id="user",
-            data_schema=_schema(user_input or {}),
+            step_id="cameras",
+            data_schema=_camera_schema(
+                self._camera_defaults, self._camera_names
+            ),
             errors=errors,
         )
 
@@ -335,21 +426,30 @@ class CCTVRelayConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         entry = self._get_reconfigure_entry()
         errors: dict[str, str] = {}
+        defaults = dict(entry.data)
+        defaults.pop(CONF_WEBHOOK_ID, None)
+
         if user_input is not None:
             try:
-                data = await _async_validate_input(self.hass, user_input)
+                data, camera_names = await _async_prepare_base_input(
+                    self.hass, user_input
+                )
             except Exception as exc:
                 error = _error_key(exc)
                 _log_validation_error("reconfigure validation", error, exc)
                 errors["base"] = error
             else:
-                data[CONF_WEBHOOK_ID] = entry.data[CONF_WEBHOOK_ID]
-                return self.async_update_reload_and_abort(
-                    entry, data_updates=data
-                )
+                self._pending_data = data
+                self._camera_names = camera_names
+                self._camera_defaults = {
+                    CONF_FRONT_CAMERA_ID: entry.data.get(CONF_FRONT_CAMERA_ID),
+                    CONF_BACK_CAMERA_ID: entry.data.get(CONF_BACK_CAMERA_ID),
+                }
+                self._reconfigure = True
+                return await self.async_step_cameras()
 
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=_schema(user_input or dict(entry.data)),
+            data_schema=_base_schema(user_input or defaults),
             errors=errors,
         )
