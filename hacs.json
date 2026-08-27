@@ -1,4 +1,5 @@
 {
-  "name": "CCTV Relay",
-  "render_readme": true
+  "name": "[KR] CCTV Relay",
+  "render_readme": true,
+  "hide_default_branch": true
 }

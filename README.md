@@ -1,4 +1,4 @@
-# Home Assistant CCTV Relay
+# [KR] Home Assistant CCTV Relay
 
 Synology Surveillance Station의 Action Rule 이벤트를 Home Assistant에서 받아 CCTV 영상을 Telegram으로 전달하는 커스텀 통합입니다.
 

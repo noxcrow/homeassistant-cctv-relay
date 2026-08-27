@@ -1,9 +1,9 @@
 {
-  "title": "CCTV Relay",
+  "title": "[KR] CCTV Relay",
   "config": {
     "step": {
       "user": {
-        "title": "Set up CCTV Relay",
+        "title": "Set up [KR] CCTV Relay",
         "description": "Enter DSM connection and Telegram settings. The next step loads the Surveillance Station camera list.\n\nDiagnostic: {auth_detail}",
         "data": {
           "synology_url": "Synology DSM HTTPS URL",
@@ -23,7 +23,7 @@
         }
       },
       "reconfigure": {
-        "title": "Reconfigure CCTV Relay",
+        "title": "Reconfigure [KR] CCTV Relay",
         "description": "Verify DSM connection settings, then reselect Surveillance Station cameras.\n\nDiagnostic: {auth_detail}",
         "data": {
           "synology_url": "Synology DSM HTTPS URL",

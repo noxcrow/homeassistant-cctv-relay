@@ -1,6 +1,6 @@
 {
   "domain": "cctv_relay",
-  "name": "CCTV Relay",
+  "name": "[KR] CCTV Relay",
   "codeowners": [
     "@noxcrow"
   ],
@@ -14,6 +14,6 @@
   "iot_class": "local_push",
   "requirements": [],
   "single_config_entry": true,
-  "version": "2.1.15",
+  "version": "2.1.16",
   "issue_tracker": "https://github.com/noxcrow/homeassistant-cctv-relay/issues"
 }
