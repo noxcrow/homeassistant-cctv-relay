@@ -166,6 +166,27 @@ class SynologyLoginCompatibilityTests(unittest.TestCase):
         self.assertIn("account=relay-user", body)
         self.assertIn("passwd=super-secret", body)
 
+
+    def test_login_falls_back_to_get_when_post_returns_auth_400(self):
+        client = self._client()
+        client._request_json = Mock(side_effect=[
+            relay.SynologyAPIError(400, "login"),
+            {"sid": "fallback-sid"},
+        ])
+        session = client.login("relay", "secret")
+        self.assertEqual(session.sid, "fallback-sid")
+        self.assertEqual(client._request_json.call_count, 2)
+        self.assertTrue(client._request_json.call_args_list[0].kwargs.get("post", False))
+        self.assertFalse(client._request_json.call_args_list[1].kwargs.get("post", False))
+
+    def test_login_does_not_fallback_for_non_400_auth_errors(self):
+        client = self._client()
+        client._request_json = Mock(side_effect=relay.SynologyAPIError(403, "login"))
+        with self.assertRaises(relay.SynologyAPIError) as ctx:
+            client.login("relay", "secret")
+        self.assertEqual(ctx.exception.code, 403)
+        self.assertEqual(client._request_json.call_count, 1)
+
     def test_tls_context_requires_tls_1_2_or_newer(self):
         client = self._client()
         self.assertGreaterEqual(

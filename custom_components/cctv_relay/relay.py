@@ -508,24 +508,32 @@ class SynologyClient:
     def login(self, username: str, password: str) -> SynologySession:
         """Authenticate using the Surveillance Station SID login format.
 
-        Keep the request intentionally minimal. The official Surveillance
-        Station WebAPI sample uses a SID session without SynoToken/device-token
-        options, which is compatible across a wider range of DSM releases.
+        Prefer POST so credentials stay out of the URL. Some DSM releases,
+        however, only accept SYNO.API.Auth login parameters through the query
+        string. If POST is rejected specifically with auth code 400, retry once
+        with the official GET form used by Synology Surveillance Station
+        examples and multiple mature DSM clients.
         """
         api = "SYNO.API.Auth"
-        data = self._request_json(
-            self._api_path(api),
-            {
-                "api": api,
-                "version": self._api_version(api, 6),
-                "method": "login",
-                "account": username,
-                "passwd": password,
-                "session": "SurveillanceStation",
-                "format": "sid",
-            },
-            post=True,
-        )
+        params = {
+            "api": api,
+            "version": self._api_version(api, 6),
+            "method": "login",
+            "account": username,
+            "passwd": password,
+            "session": "SurveillanceStation",
+            "format": "sid",
+        }
+        try:
+            data = self._request_json(self._api_path(api), params, post=True)
+        except SynologyAPIError as exc:
+            if exc.code != 400 or exc.operation.lower() != "login":
+                raise
+            LOG.info(
+                "DSM rejected POST authentication with code 400; retrying "
+                "using the Surveillance Station GET authentication form"
+            )
+            data = self._request_json(self._api_path(api), params)
         sid = data.get("sid")
         if not isinstance(sid, str) or not sid:
             raise RelayError("Synology login returned no session ID")
@@ -541,7 +549,12 @@ class SynologyClient:
             "session": "SurveillanceStation",
             "_sid": session.sid,
         }
-        self._request_json(self._api_path(api), params, post=True)
+        try:
+            self._request_json(self._api_path(api), params, post=True)
+        except SynologyAPIError as exc:
+            if exc.code not in {100, 101, 400} or exc.operation.lower() != "logout":
+                raise
+            self._request_json(self._api_path(api), params)
 
     @contextlib.contextmanager
     def session(self, username: str, password: str) -> Iterator[SynologySession]:
