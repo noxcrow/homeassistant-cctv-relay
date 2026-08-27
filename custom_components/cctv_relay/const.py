@@ -7,8 +7,7 @@ PLATFORMS = (Platform.SENSOR,)
 
 CONF_SYNOLOGY_URL = "synology_url"
 CONF_VERIFY_SSL = "verify_ssl"
-CONF_FRONT_CAMERA_ID = "front_camera_id"
-CONF_BACK_CAMERA_ID = "back_camera_id"
+CONF_CAMERA_IDS = "camera_ids"
 CONF_TELEGRAM_NOTIFY_ENTITY = "telegram_notify_entity"
 CONF_WEBHOOK_ID = "webhook_id"
 CONF_PRE_SECONDS = "pre_seconds"
@@ -42,32 +41,6 @@ DEFAULT_SENT_RETENTION_DAYS = 30
 DEFAULT_DEDUP_WINDOW_SECONDS = 3
 DEFAULT_DSM_TIMEOUT_SECONDS = 20
 DEFAULT_EXPORT_TIMEOUT_SECONDS = 120
-
-CAMERA_DEFINITIONS = {
-    "front": {
-        "slot_name": "카메라 1",
-    },
-    "back": {
-        "slot_name": "카메라 2",
-    },
-}
-
-RULE_MAP = {
-    # Generic rule names recommended for new installations.
-    "TG_CAMERA1_MOTION": ("front", "motion"),
-    "TG_CAMERA2_MOTION": ("back", "motion"),
-    "TG_CAMERA1_LOST": ("front", "lost"),
-    "TG_CAMERA1_RESTORED": ("front", "restored"),
-    "TG_CAMERA2_LOST": ("back", "lost"),
-    "TG_CAMERA2_RESTORED": ("back", "restored"),
-    # Legacy names retained for existing installations.
-    "TG_FRONT_MOTION": ("front", "motion"),
-    "TG_BACK_MOTION": ("back", "motion"),
-    "TG_FRONT_LOST": ("front", "lost"),
-    "TG_FRONT_RESTORED": ("front", "restored"),
-    "TG_BACK_LOST": ("back", "lost"),
-    "TG_BACK_RESTORED": ("back", "restored"),
-}
 
 
 ALLOWED_EVENT_TYPES = frozenset({"motion", "lost", "restored", "test"})

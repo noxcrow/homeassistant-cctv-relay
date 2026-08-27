@@ -45,10 +45,9 @@
       },
       "cameras": {
         "title": "카메라 선택",
-        "description": "Surveillance Station에서 조회한 카메라가 드롭다운 메뉴로 표시됩니다. 카메라명과 ID를 확인해 서로 다른 두 대를 선택하세요.",
+        "description": "Surveillance Station에서 조회한 카메라 중 사용할 카메라를 1대 이상 선택하세요. 여러 대를 동시에 선택할 수 있습니다.",
         "data": {
-          "front_camera_id": "카메라 1",
-          "back_camera_id": "카메라 2"
+          "camera_ids": "사용할 카메라"
         }
       }
     },
@@ -60,7 +59,6 @@
       "webapi_forbidden": "DSM WebAPI가 HTTP 403을 반환했습니다. 이 호스트를 Web Station이나 응용 프로그램 포털이 아닌 DSM 포털에 연결하세요.",
       "invalid_webapi_response": "입력한 주소가 올바른 Synology WebAPI 응답을 반환하지 않았습니다.",
       "invalid_url": "올바른 Synology DSM HTTPS 주소를 입력하세요.",
-      "invalid_camera_ids": "카메라 1과 카메라 2의 ID는 서로 달라야 합니다.",
       "invalid_auth": "DSM 인증에 실패했습니다.",
       "otp_required": "이 DSM 계정은 CCTV Relay가 입력할 수 없는 OTP를 요구합니다. 대화형 OTP가 없는 Surveillance Station 전용 계정을 사용하세요.",
       "account_locked": "DSM 계정이 잠겼거나 일시적으로 차단되었습니다.",
@@ -73,8 +71,10 @@
       "telegram_not_ready": "선택한 Telegram 알림 엔티티 또는 전송 액션을 사용할 수 없습니다.",
       "unknown": "예상하지 못한 오류입니다. Home Assistant 로그를 확인하세요.",
       "camera_not_found": "선택한 카메라 중 하나 이상을 Surveillance Station에서 찾을 수 없습니다. 카메라 목록을 다시 불러와 선택하세요.",
-      "not_enough_cameras": "Surveillance Station에서 접근 가능한 카메라가 최소 2대 필요합니다.",
-      "clip_duration_too_long": "감지 전/후 영상 시간의 합계는 최대 30초까지 설정할 수 있습니다."
+      "clip_duration_too_long": "감지 전/후 영상 시간의 합계는 최대 30초까지 설정할 수 있습니다.",
+      "no_cameras": "이 DSM 계정에서 조회 가능한 Surveillance Station 카메라가 없습니다. 카메라 접근 권한을 확인하세요.",
+      "no_camera_selected": "카메라를 1대 이상 선택하세요.",
+      "duplicate_cameras": "동일한 카메라를 중복 선택할 수 없습니다."
     },
     "abort": {
       "already_configured": "CCTV 릴레이가 이미 설정되어 있습니다.",

@@ -22,14 +22,16 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
 )
 
 from .const import (
-    CONF_BACK_CAMERA_ID,
-    CONF_FRONT_CAMERA_ID,
+    CONF_CAMERA_IDS,
     CONF_HISTORY_ENABLED,
     CONF_HISTORY_INTERVAL,
     CONF_POST_SECONDS,
@@ -153,23 +155,36 @@ def _base_schema(defaults: dict[str, Any]) -> vol.Schema:
 def _camera_schema(
     defaults: dict[str, Any], camera_names: dict[int, str]
 ) -> vol.Schema:
-    options = {
-        str(camera_id): f"{name} (ID {camera_id})"
+    options = [
+        {"value": str(camera_id), "label": f"{name} (ID {camera_id})"}
         for camera_id, name in sorted(
             camera_names.items(), key=lambda item: item[1].casefold()
         )
-    }
+    ]
+    selected = []
+    for value in defaults.get(CONF_CAMERA_IDS, []):
+        try:
+            camera_id = int(value)
+        except (TypeError, ValueError):
+            continue
+        if camera_id in camera_names:
+            selected.append(str(camera_id))
 
-    def _camera_field(key: str) -> vol.Marker:
-        current = defaults.get(key)
-        if current is not None and str(int(current)) in options:
-            return vol.Required(key, default=str(int(current)))
-        return vol.Required(key)
-
+    field = (
+        vol.Required(CONF_CAMERA_IDS, default=selected)
+        if selected
+        else vol.Required(CONF_CAMERA_IDS)
+    )
     return vol.Schema(
         {
-            _camera_field(CONF_FRONT_CAMERA_ID): vol.In(options),
-            _camera_field(CONF_BACK_CAMERA_ID): vol.In(options),
+            field: SelectSelector(
+                SelectSelectorConfig(
+                    options=options,
+                    multiple=True,
+                    custom_value=False,
+                    mode=SelectSelectorMode.DROPDOWN,
+                )
+            )
         }
     )
 
@@ -190,33 +205,35 @@ def _load_dsm_cameras(data: dict[str, Any]) -> dict[int, str]:
     password = str(data[CONF_PASSWORD])
     client.discover()
     camera_names = client.camera_names(username, password)
-    if len(camera_names) < 2:
-        raise ValueError("not_enough_cameras")
+    if not camera_names:
+        _LOGGER.warning(
+            "CCTV Relay found no Surveillance Station cameras accessible to the configured DSM account"
+        )
+        raise ValueError("no_cameras")
     if bool(data[CONF_HISTORY_ENABLED]):
         client.list_history(username, password, DEFAULT_HISTORY_PAGE_SIZE)
     return camera_names
 
 
 def _validate_selected_cameras(data: dict[str, Any]) -> None:
-    front_id = int(data[CONF_FRONT_CAMERA_ID])
-    back_id = int(data[CONF_BACK_CAMERA_ID])
-    if front_id == back_id:
-        raise ValueError("invalid_camera_ids")
+    camera_ids = [int(value) for value in data.get(CONF_CAMERA_IDS, [])]
+    if not camera_ids:
+        raise ValueError("no_camera_selected")
+    if len(camera_ids) != len(set(camera_ids)):
+        raise ValueError("duplicate_cameras")
 
     client = _build_client(data)
     username = str(data[CONF_USERNAME])
     password = str(data[CONF_PASSWORD])
     camera_names = client.camera_names(username, password)
-    if not {front_id, back_id}.issubset(camera_names):
+    if not set(camera_ids).issubset(camera_names):
         raise ValueError("camera_not_found")
 
     now = int(time.time())
-    client.list_recordings(
-        username, password, front_id, now - 3600, now
-    )
-    client.list_recordings(
-        username, password, back_id, now - 3600, now
-    )
+    for camera_id in camera_ids:
+        client.list_recordings(
+            username, password, camera_id, now - 3600, now
+        )
 
 
 async def _async_prepare_base_input(
@@ -261,8 +278,10 @@ async def _async_validate_camera_selection(
     hass: HomeAssistant, base_data: dict[str, Any], user_input: dict[str, Any]
 ) -> dict[str, Any]:
     data = dict(base_data)
-    data[CONF_FRONT_CAMERA_ID] = int(user_input[CONF_FRONT_CAMERA_ID])
-    data[CONF_BACK_CAMERA_ID] = int(user_input[CONF_BACK_CAMERA_ID])
+    selected = user_input.get(CONF_CAMERA_IDS, [])
+    if not isinstance(selected, list) or not selected:
+        raise ValueError("no_camera_selected")
+    data[CONF_CAMERA_IDS] = [int(value) for value in selected]
     await hass.async_add_executor_job(_validate_selected_cameras, data)
     return data
 
@@ -270,9 +289,10 @@ async def _async_validate_camera_selection(
 def _error_key(exc: Exception) -> str:
     if isinstance(exc, ValueError) and str(exc) in {
         "invalid_url",
-        "invalid_camera_ids",
         "camera_not_found",
-        "not_enough_cameras",
+        "no_cameras",
+        "no_camera_selected",
+        "duplicate_cameras",
         "clip_duration_too_long",
         "telegram_not_ready",
     }:
@@ -477,8 +497,7 @@ class CCTVRelayConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._pending_data = data
                 self._camera_names = camera_names
                 self._camera_defaults = {
-                    CONF_FRONT_CAMERA_ID: entry.data.get(CONF_FRONT_CAMERA_ID),
-                    CONF_BACK_CAMERA_ID: entry.data.get(CONF_BACK_CAMERA_ID),
+                    CONF_CAMERA_IDS: entry.data.get(CONF_CAMERA_IDS, []),
                 }
                 self._reconfigure = True
                 return await self.async_step_cameras()

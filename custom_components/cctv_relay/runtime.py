@@ -10,6 +10,7 @@ import json
 import logging
 import pathlib
 import random
+import re
 import shutil
 import sqlite3
 import tempfile
@@ -26,10 +27,8 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import (
     ALLOWED_EVENT_TYPES,
-    CAMERA_DEFINITIONS,
-    CONF_BACK_CAMERA_ID,
+    CONF_CAMERA_IDS,
     CONF_FFMPEG_PATH,
-    CONF_FRONT_CAMERA_ID,
     CONF_HISTORY_ENABLED,
     CONF_HISTORY_INTERVAL,
     CONF_HISTORY_LOOKBACK,
@@ -57,7 +56,6 @@ from .const import (
     DEFAULT_RETRY_MAX_SECONDS,
     DEFAULT_SENT_RETENTION_DAYS,
     DEFAULT_VERIFY_SSL,
-    RULE_MAP,
     SIGNAL_QUEUE_UPDATED,
 )
 from .relay import (
@@ -88,6 +86,16 @@ def _prepare_temp_root(path: pathlib.Path) -> None:
             pass
 
 
+def _parse_rule_name(rule_name: str) -> tuple[str, str] | None:
+    """Parse TG_CAMERA_<DSM_ID>_<EVENT> Action Rule names."""
+    match = re.fullmatch(
+        r"TG_CAMERA_(\d+)_(MOTION|LOST|RESTORED)", rule_name.upper()
+    )
+    if match is None:
+        return None
+    return match.group(1), match.group(2).lower()
+
+
 class CCTVRelayRuntime:
     """Own the durable queue, workers, and Synology client for one entry."""
 
@@ -97,17 +105,16 @@ class CCTVRelayRuntime:
         self.data = dict(entry.data)
         self.store: EventStore | None = None
         self.synology: SynologyClient | None = None
+        camera_ids = [int(value) for value in self.data.get(CONF_CAMERA_IDS, [])]
+        if not camera_ids:
+            raise RelayError("no cameras configured")
         self.cameras = {
-            "front": CameraConfig(
-                key="front",
-                camera_id=int(self.data[CONF_FRONT_CAMERA_ID]),
-                **CAMERA_DEFINITIONS["front"],
-            ),
-            "back": CameraConfig(
-                key="back",
-                camera_id=int(self.data[CONF_BACK_CAMERA_ID]),
-                **CAMERA_DEFINITIONS["back"],
-            ),
+            str(camera_id): CameraConfig(
+                key=str(camera_id),
+                camera_id=camera_id,
+                slot_name=f"카메라 ID {camera_id}",
+            )
+            for camera_id in camera_ids
         }
         self._db_executor = ThreadPoolExecutor(
             max_workers=1, thread_name_prefix="cctv-relay-db"
@@ -305,13 +312,7 @@ class CCTVRelayRuntime:
             except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
                 return web.json_response({"error": "invalid request body"}, status=400)
 
-        camera_key = str(payload.get("camera", "")).strip().lower()
-        camera_key = {
-            "camera1": "front",
-            "camera2": "back",
-            "1": "front",
-            "2": "back",
-        }.get(camera_key, camera_key)
+        camera_key = str(payload.get("camera", "")).strip()
         event_type = str(payload.get("event_type", "")).strip().lower()
         if camera_key not in self.cameras:
             return web.json_response({"error": "unknown camera"}, status=400)
@@ -363,7 +364,7 @@ class CCTVRelayRuntime:
         )
 
     async def _async_camera_worker(self, camera_key: str) -> None:
-        """Process one camera serially while allowing both cameras in parallel."""
+        """Process one camera serially while allowing cameras in parallel."""
         store = self._require_store()
         while not self._stop.is_set():
             event = await self._async_db(store.claim_next, camera_key)
@@ -563,7 +564,7 @@ class CCTVRelayRuntime:
 
         for row in rows:
             rule_name = str(row.get("ruleName", ""))
-            mapping = RULE_MAP.get(rule_name)
+            mapping = _parse_rule_name(rule_name)
             if mapping is None:
                 continue
             try:
@@ -574,6 +575,8 @@ class CCTVRelayRuntime:
             if event_time < cutoff:
                 continue
             camera_key, event_type = mapping
+            if camera_key not in self.cameras:
+                continue
             _, created = await self._async_db(
                 store.enqueue,
                 event_key=f"history:{history_id}",

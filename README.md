@@ -56,15 +56,14 @@ Home Assistant 재시작 후:
 - Synology DSM 주소
 - SSL 인증서 검증 여부
 - Synology 사용자 이름 / 비밀번호
-- Surveillance Station에서 조회된 카메라 목록에서 카메라 1 선택
-- Surveillance Station에서 조회된 카메라 목록에서 카메라 2 선택
+- Surveillance Station에서 조회된 카메라 목록에서 사용할 카메라 1대 이상 선택
 - Telegram Notify 엔티티
 - 감지 전 영상 시간: 직접 숫자 입력 (0~15초)
 - 감지 후 영상 시간: 직접 숫자 입력 (1~30초)
 - Action Rule History 복구 사용 여부
 - History 확인 주기
 
-카메라 1/2는 위치를 의미하지 않습니다. DSM 연결정보를 입력하면 Surveillance Station의 카메라 목록을 자동으로 조회하며, 표시되는 카메라명과 ID를 확인해 원하는 두 대를 선택하면 됩니다. Telegram 알림에는 Surveillance Station에 설정된 실제 카메라명이 표시됩니다.
+DSM 연결정보를 입력하면 Surveillance Station의 카메라 목록을 자동으로 조회합니다. 표시되는 카메라명과 ID를 확인해 사용할 카메라를 1대 이상 선택할 수 있으며, 카메라 수에 고정 제한은 없습니다. Telegram 알림에는 Surveillance Station에 설정된 실제 카메라명이 표시됩니다.
 
 감지 전/후 영상 시간의 합계는 최대 30초입니다. Telegram Bot의 일반 비디오 업로드 한계(50MB)에 여유를 두기 위해 CCTV Relay는 최종 영상 파일을 45MB로 제한하며, 카메라 비트레이트가 높아 30초 미만 영상이 45MB를 넘는 경우에도 전송하지 않고 재시도/오류 처리합니다.
 
@@ -80,12 +79,9 @@ Surveillance Station의 Action Rule에서 Home Assistant CCTV Relay 웹훅 주�
 
 ### camera 값
 
-새 설치에서는 아래 값을 권장합니다. 각 값은 통합 설정에서 입력한 Surveillance Station 카메라 ID에 연결됩니다.
+`camera`에는 **Surveillance Station의 실제 Camera ID**를 사용합니다. 통합 설정에서 선택한 카메라만 허용됩니다.
 
-- `camera1` : 목록에서 **카메라 1**로 선택한 DSM 카메라
-- `camera2` : 목록에서 **카메라 2**로 선택한 DSM 카메라
-
-기존 설치 호환을 위해 `front`/`back` 값도 계속 사용할 수 있습니다.
+예를 들어 DSM Camera ID가 `7`, `12`, `18`이면 각각 `camera=7`, `camera=12`, `camera=18`을 사용합니다.
 
 ### event_type 값
 
@@ -96,7 +92,7 @@ Surveillance Station의 Action Rule에서 Home Assistant CCTV Relay 웹훅 주�
 
 예시:
 
-`https://homeassistant.example.com/api/webhook/<webhook_id>?camera=camera1&event_type=motion`
+`https://homeassistant.example.com/api/webhook/<webhook_id>?camera=7&event_type=motion`
 
 웹훅 ID는 외부에 공개하지 마십시오.
 
@@ -117,7 +113,7 @@ HACS에서 CCTV Relay 업데이트가 표시되면 업데이트 후 Home Assista
 ### 영상이 전송되지 않는 경우
 
 - Synology Surveillance Station에서 해당 시간대 녹화가 존재하는지 확인합니다.
-- 설정한 카메라 ID가 실제 Surveillance Station 카메라 ID와 일치하는지 확인합니다.
+- 선택한 카메라가 Surveillance Station에서 현재 조회 가능한지 확인합니다.
 - Synology 계정에 녹화 재생/조회 권한이 있는지 확인합니다.
 - Home Assistant에서 DSM 주소로 접근 가능한지 확인합니다.
 - Telegram Notify 엔티티가 정상 동작하는지 확인합니다.

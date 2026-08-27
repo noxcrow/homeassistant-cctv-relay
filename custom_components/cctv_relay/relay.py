@@ -674,20 +674,57 @@ class SynologyClient:
     def list_cameras(
         self, username: str, password: str
     ) -> list[dict[str, Any]]:
-        """Return Surveillance Station cameras visible to the configured account."""
+        """Return all Surveillance Station cameras visible to the account.
+
+        Surveillance Station releases differ in how Camera.List filters are
+        interpreted. Query several compatible variants and merge by camera ID
+        so a restrictive filter cannot hide otherwise accessible cameras.
+        """
         api = "SYNO.SurveillanceStation.Camera"
+        variants = (
+            {},
+            {"privCamType": 3, "camStm": 2},
+            {"privCamType": 1, "camStm": 0},
+        )
+        merged: dict[int, dict[str, Any]] = {}
+        unkeyed: list[dict[str, Any]] = []
+        first_error: Exception | None = None
+
         with self.session(username, password) as active:
-            data = self.call_json(
-                api,
-                "List",
-                9,
-                active,
-                {"privCamType": 1, "camStm": 0},
+            for params in variants:
+                try:
+                    data = self.call_json(api, "List", 9, active, params)
+                except (RelayError, SynologyAPIError) as exc:
+                    if first_error is None:
+                        first_error = exc
+                    continue
+                cameras = data.get("cameras", [])
+                if not isinstance(cameras, list):
+                    if first_error is None:
+                        first_error = RelayError(
+                            "Synology camera list returned an invalid response"
+                        )
+                    continue
+                for camera in cameras:
+                    if not isinstance(camera, dict):
+                        continue
+                    try:
+                        camera_id = int(camera["id"])
+                    except (KeyError, TypeError, ValueError):
+                        unkeyed.append(camera)
+                        continue
+                    merged[camera_id] = camera
+
+        cameras = list(merged.values()) + unkeyed
+        if cameras:
+            LOG.info(
+                "Surveillance Station camera discovery returned %d accessible camera(s)",
+                len(merged),
             )
-        cameras = data.get("cameras", [])
-        if not isinstance(cameras, list):
-            raise RelayError("Synology camera list returned an invalid response")
-        return [camera for camera in cameras if isinstance(camera, dict)]
+            return cameras
+        if first_error is not None:
+            raise first_error
+        return []
 
     def camera_names(
         self, username: str, password: str

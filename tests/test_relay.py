@@ -18,13 +18,13 @@ class EventStoreDedupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store = relay.EventStore(str(pathlib.Path(tmp) / "queue.db"))
             first_id, created = store.enqueue(
-                event_key="history:10", camera_key="front", event_type="motion",
+                event_key="history:10", camera_key="7", event_type="motion",
                 event_time=1000.0, source="action_rule_history", history_id=10,
                 match_window_seconds=15,
             )
             self.assertTrue(created)
             second_id, created = store.enqueue(
-                event_key="webhook:front:motion:1008", camera_key="front",
+                event_key="webhook:7:motion:1008", camera_key="7",
                 event_type="motion", event_time=1008.0, source="webhook",
                 match_window_seconds=15,
             )
@@ -36,13 +36,13 @@ class EventStoreDedupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store = relay.EventStore(str(pathlib.Path(tmp) / "queue.db"))
             first_id, created = store.enqueue(
-                event_key="webhook:front:motion:1000", camera_key="front",
+                event_key="webhook:7:motion:1000", camera_key="7",
                 event_type="motion", event_time=1000.0, source="webhook",
                 match_window_seconds=15,
             )
             self.assertTrue(created)
             second_id, created = store.enqueue(
-                event_key="webhook:front:motion:1008", camera_key="front",
+                event_key="webhook:7:motion:1008", camera_key="7",
                 event_type="motion", event_time=1008.0, source="webhook",
                 match_window_seconds=15,
             )
@@ -54,14 +54,14 @@ class EventStoreDedupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store = relay.EventStore(str(pathlib.Path(tmp) / "queue.db"))
             first_id, created = store.enqueue(
-                event_key="history:10", camera_key="front",
+                event_key="history:10", camera_key="7",
                 event_type="motion", event_time=1000.0,
                 source="action_rule_history", history_id=10,
                 match_window_seconds=15,
             )
             self.assertTrue(created)
             second_id, created = store.enqueue(
-                event_key="history:11", camera_key="front",
+                event_key="history:11", camera_key="7",
                 event_type="motion", event_time=1008.0,
                 source="action_rule_history", history_id=11,
                 match_window_seconds=15,
@@ -74,13 +74,13 @@ class EventStoreDedupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store = relay.EventStore(str(pathlib.Path(tmp) / "queue.db"))
             first_id, created = store.enqueue(
-                event_key="webhook:front:motion:1000", camera_key="front",
+                event_key="webhook:7:motion:1000", camera_key="7",
                 event_type="motion", event_time=1000.0, source="webhook",
                 match_window_seconds=15,
             )
             self.assertTrue(created)
             second_id, created = store.enqueue(
-                event_key="webhook:front:motion:1016", camera_key="front",
+                event_key="webhook:7:motion:1016", camera_key="7",
                 event_type="motion", event_time=1016.0, source="webhook",
                 match_window_seconds=15,
             )
@@ -92,13 +92,13 @@ class EventStoreDedupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             store = relay.EventStore(str(pathlib.Path(tmp) / "queue.db"))
             first_id, created = store.enqueue(
-                event_key="webhook:front:lost:1000", camera_key="front",
+                event_key="webhook:7:lost:1000", camera_key="7",
                 event_type="lost", event_time=1000.0, source="webhook",
                 match_window_seconds=15,
             )
             self.assertTrue(created)
             second_id, created = store.enqueue(
-                event_key="webhook:front:lost:1008", camera_key="front",
+                event_key="webhook:7:lost:1008", camera_key="7",
                 event_type="lost", event_time=1008.0, source="webhook",
                 match_window_seconds=15,
             )
@@ -111,16 +111,47 @@ class EventStoreDedupTests(unittest.TestCase):
 class CameraConfigTests(unittest.TestCase):
     def test_uses_dsm_camera_name(self):
         camera = relay.CameraConfig(
-            key="front", camera_id=7, slot_name="카메라 1", camera_name="현관 CCTV"
+            key="7", camera_id=7, slot_name="카메라 ID 7", camera_name="테스트 카메라"
         )
-        self.assertEqual(camera.display_name, "현관 CCTV")
-        self.assertIn("현관 CCTV", camera.caption)
+        self.assertEqual(camera.display_name, "테스트 카메라")
+        self.assertIn("테스트 카메라", camera.caption)
 
     def test_falls_back_to_slot_and_id_without_dsm_name(self):
         camera = relay.CameraConfig(
-            key="front", camera_id=7, slot_name="카메라 1"
+            key="7", camera_id=7, slot_name="카메라 ID 7"
         )
-        self.assertEqual(camera.display_name, "카메라 1 (ID 7)")
+        self.assertEqual(camera.display_name, "카메라 ID 7 (ID 7)")
+
+
+class SynologyCameraDiscoveryTests(unittest.TestCase):
+    def _client(self):
+        client = relay.SynologyClient(
+            "https://dsm.example", None, 5, 5, verify_ssl=False
+        )
+        session = Mock()
+        session.__enter__ = Mock(return_value=Mock())
+        session.__exit__ = Mock(return_value=False)
+        client.session = Mock(return_value=session)
+        return client
+
+    def test_merges_camera_list_variants(self):
+        client = self._client()
+        client.call_json = Mock(side_effect=[
+            {"cameras": [{"id": 1, "name": "A"}]},
+            {"cameras": [{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]},
+            {"cameras": [{"id": 1, "name": "A"}]},
+        ])
+        self.assertEqual(client.camera_names("user", "pass"), {1: "A", 2: "B"})
+        self.assertEqual(client.call_json.call_count, 3)
+
+    def test_survives_one_camera_list_variant_failure(self):
+        client = self._client()
+        client.call_json = Mock(side_effect=[
+            relay.SynologyAPIError(105, "List"),
+            {"cameras": [{"id": 1, "name": "A"}, {"id": 2, "name": "B"}]},
+            {"cameras": []},
+        ])
+        self.assertEqual(client.camera_names("user", "pass"), {1: "A", 2: "B"})
 
 
 class DurationParsingTests(unittest.TestCase):
