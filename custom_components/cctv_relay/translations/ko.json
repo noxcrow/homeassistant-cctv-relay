@@ -61,7 +61,8 @@
       "missing_apis": "DSM에서 CCTV Relay에 필요한 Synology API를 모두 제공하지 않습니다.",
       "synology_api_error": "Synology API 오류가 발생했습니다. Home Assistant 로그에서 작업명과 오류 코드를 확인하세요.",
       "telegram_not_ready": "선택한 Telegram 알림 엔티티 또는 전송 액션을 사용할 수 없습니다.",
-      "unknown": "예상하지 못한 오류입니다. Home Assistant 로그를 확인하세요."
+      "unknown": "예상하지 못한 오류입니다. Home Assistant 로그를 확인하세요.",
+      "camera_not_found": "설정한 카메라 ID 중 하나 이상을 Surveillance Station에서 찾을 수 없습니다."
     },
     "abort": {
       "already_configured": "CCTV 릴레이가 이미 설정되어 있습니다.",

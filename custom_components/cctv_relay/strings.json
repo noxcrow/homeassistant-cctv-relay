@@ -61,7 +61,8 @@
       "missing_apis": "DSM does not expose all Synology APIs required by CCTV Relay.",
       "synology_api_error": "Synology returned an API error. Check the Home Assistant log for the operation and code.",
       "telegram_not_ready": "The selected Telegram notify entity or send actions are not available.",
-      "unknown": "Unexpected error. Check the Home Assistant log."
+      "unknown": "Unexpected error. Check the Home Assistant log.",
+      "camera_not_found": "One or more configured camera IDs were not found in Surveillance Station."
     },
     "abort": {
       "already_configured": "CCTV Relay is already configured.",

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 import json
@@ -177,6 +178,26 @@ class CCTVRelayRuntime:
                 _prepare_temp_root, self._temp_root
             )
             self.store = await self._async_db(EventStore, database_path)
+
+            try:
+                camera_names = await self.hass.async_add_executor_job(
+                    self.synology.camera_names,
+                    str(self.data[CONF_USERNAME]),
+                    str(self.data[CONF_PASSWORD]),
+                )
+            except RelayError as exc:
+                _LOGGER.warning(
+                    "Could not load Surveillance Station camera names; "
+                    "using configured ID labels: %s",
+                    exc,
+                )
+            else:
+                self.cameras = {
+                    key: dataclasses.replace(
+                        camera, camera_name=camera_names.get(camera.camera_id)
+                    )
+                    for key, camera in self.cameras.items()
+                }
 
             if bool(
                 self.data.get(CONF_HISTORY_ENABLED, DEFAULT_HISTORY_ENABLED)

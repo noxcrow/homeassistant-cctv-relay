@@ -108,6 +108,21 @@ class EventStoreDedupTests(unittest.TestCase):
 
 
 
+class CameraConfigTests(unittest.TestCase):
+    def test_uses_dsm_camera_name(self):
+        camera = relay.CameraConfig(
+            key="front", camera_id=7, slot_name="카메라 1", camera_name="현관 CCTV"
+        )
+        self.assertEqual(camera.display_name, "현관 CCTV")
+        self.assertIn("현관 CCTV", camera.caption)
+
+    def test_falls_back_to_slot_and_id_without_dsm_name(self):
+        camera = relay.CameraConfig(
+            key="front", camera_id=7, slot_name="카메라 1"
+        )
+        self.assertEqual(camera.display_name, "카메라 1 (ID 7)")
+
+
 class DurationParsingTests(unittest.TestCase):
     def test_parse_duration(self):
         self.assertAlmostEqual(

@@ -63,7 +63,7 @@ Home Assistant 재시작 후:
 - Action Rule History 복구 사용 여부
 - History 확인 주기
 
-카메라 1/2는 위치를 의미하지 않습니다. Surveillance Station에 등록된 원하는 두 카메라의 ID를 각각 지정하면 됩니다. Telegram 알림에도 설정한 카메라 ID가 표시됩니다.
+카메라 1/2는 위치를 의미하지 않습니다. Surveillance Station에 등록된 원하는 두 카메라의 ID를 각각 지정하면 됩니다. Telegram 알림에는 Surveillance Station에 설정된 실제 카메라명이 표시됩니다.
 
 ## Synology Action Rule 설정
 

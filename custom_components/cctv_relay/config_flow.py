@@ -128,6 +128,13 @@ def _validate_dsm(data: dict[str, Any]) -> None:
     password = str(data[CONF_PASSWORD])
     now = int(time.time())
     client.discover()
+    camera_names = client.camera_names(username, password)
+    selected_ids = {
+        int(data[CONF_FRONT_CAMERA_ID]),
+        int(data[CONF_BACK_CAMERA_ID]),
+    }
+    if not selected_ids.issubset(camera_names):
+        raise ValueError("camera_not_found")
     client.list_recordings(
         username,
         password,
@@ -186,6 +193,7 @@ def _error_key(exc: Exception) -> str:
     if isinstance(exc, ValueError) and str(exc) in {
         "invalid_url",
         "invalid_camera_ids",
+        "camera_not_found",
         "telegram_not_ready",
     }:
         return str(exc)

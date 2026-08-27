@@ -50,9 +50,12 @@ class CameraConfig:
     key: str
     camera_id: int
     slot_name: str
+    camera_name: str | None = None
 
     @property
     def display_name(self) -> str:
+        if self.camera_name and self.camera_name.strip():
+            return self.camera_name.strip()
         return f"{self.slot_name} (ID {self.camera_id})"
 
     @property
@@ -370,6 +373,7 @@ class SynologySession:
 class SynologyClient:
     REQUIRED_APIS = (
         "SYNO.API.Auth",
+        "SYNO.SurveillanceStation.Camera",
         "SYNO.SurveillanceStation.Recording",
         "SYNO.SurveillanceStation.ActionRule",
     )
@@ -666,6 +670,39 @@ class SynologyClient:
             if output_path.stat().st_size == 0:
                 raise RelayError("Synology exported an empty file")
             return output_path
+
+    def list_cameras(
+        self, username: str, password: str
+    ) -> list[dict[str, Any]]:
+        """Return Surveillance Station cameras visible to the configured account."""
+        api = "SYNO.SurveillanceStation.Camera"
+        with self.session(username, password) as active:
+            data = self.call_json(
+                api,
+                "List",
+                9,
+                active,
+                {"privCamType": 1, "camStm": 0},
+            )
+        cameras = data.get("cameras", [])
+        if not isinstance(cameras, list):
+            raise RelayError("Synology camera list returned an invalid response")
+        return [camera for camera in cameras if isinstance(camera, dict)]
+
+    def camera_names(
+        self, username: str, password: str
+    ) -> dict[int, str]:
+        """Map Surveillance Station camera IDs to their configured names."""
+        result: dict[int, str] = {}
+        for camera in self.list_cameras(username, password):
+            try:
+                camera_id = int(camera["id"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            name = str(camera.get("name", "")).strip()
+            if name:
+                result[camera_id] = name
+        return result
 
     def list_history(
         self, username: str, password: str, page_size: int
