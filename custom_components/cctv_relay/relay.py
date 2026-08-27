@@ -370,6 +370,13 @@ class SynologySession:
     synotoken: str | None
 
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Reject redirects so DSM credentials and sessions stay on one origin."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise RelayError(f"Synology redirect blocked (HTTP {code})")
+
+
 class SynologyClient:
     REQUIRED_APIS = (
         "SYNO.API.Auth",
@@ -390,9 +397,14 @@ class SynologyClient:
         self.timeout_seconds = timeout_seconds
         self.export_timeout_seconds = export_timeout_seconds
         self.ssl_context = ssl.create_default_context(cafile=ca_file)
+        self.ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
         if not verify_ssl:
             self.ssl_context.check_hostname = False
             self.ssl_context.verify_mode = ssl.CERT_NONE
+        self._opener = urllib.request.build_opener(
+            _NoRedirectHandler(),
+            urllib.request.HTTPSHandler(context=self.ssl_context),
+        )
         self._api_info: dict[str, dict[str, Any]] | None = None
         self._discovery_lock = threading.Lock()
 
@@ -421,8 +433,8 @@ class SynologyClient:
                 self._build_url(path, params), method="GET"
             )
         try:
-            with urllib.request.urlopen(
-                request, context=self.ssl_context, timeout=self.timeout_seconds
+            with self._opener.open(
+                request, timeout=self.timeout_seconds
             ) as response:
                 body = response.read(MAX_JSON_RESPONSE_BYTES + 1)
         except urllib.error.HTTPError as exc:
@@ -505,6 +517,7 @@ class SynologyClient:
                 "session": "SurveillanceStation",
                 "format": "sid",
             },
+            post=True,
         )
         sid = data.get("sid")
         if not isinstance(sid, str) or not sid:
@@ -521,7 +534,7 @@ class SynologyClient:
             "session": "SurveillanceStation",
             "_sid": session.sid,
         }
-        self._request_json(self._api_path(api), params)
+        self._request_json(self._api_path(api), params, post=True)
 
     @contextlib.contextmanager
     def session(self, username: str, password: str) -> Iterator[SynologySession]:
@@ -629,9 +642,8 @@ class SynologyClient:
                 self._build_url(self._api_path(api), request_params), method="GET"
             )
             try:
-                with urllib.request.urlopen(
+                with self._opener.open(
                     request,
-                    context=self.ssl_context,
                     timeout=self.export_timeout_seconds,
                 ) as response, output_path.open("wb") as output:
                     total = 0

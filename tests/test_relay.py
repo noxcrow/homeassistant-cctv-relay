@@ -1,5 +1,6 @@
 import importlib.util
 import pathlib
+import ssl
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
@@ -146,7 +147,13 @@ class SynologyLoginCompatibilityTests(unittest.TestCase):
         self.assertEqual(params["format"], "sid")
         self.assertNotIn("enable_syno_token", params)
         self.assertNotIn("enable_device_token", params)
-        self.assertFalse(client._request_json.call_args.kwargs.get("post", False))
+        self.assertTrue(client._request_json.call_args.kwargs.get("post", False))
+
+    def test_tls_context_requires_tls_1_2_or_newer(self):
+        client = self._client()
+        self.assertGreaterEqual(
+            client.ssl_context.minimum_version, ssl.TLSVersion.TLSv1_2
+        )
 
     def test_logout_uses_sid_without_synotoken(self):
         client = self._client()
@@ -155,7 +162,7 @@ class SynologyLoginCompatibilityTests(unittest.TestCase):
         _, params = client._request_json.call_args.args[:2]
         self.assertEqual(params["_sid"], "abc123")
         self.assertNotIn("SynoToken", params)
-        self.assertFalse(client._request_json.call_args.kwargs.get("post", False))
+        self.assertTrue(client._request_json.call_args.kwargs.get("post", False))
 
 
 class SynologyCameraDiscoveryTests(unittest.TestCase):

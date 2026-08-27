@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import logging
 import socket
 import ssl
@@ -47,7 +48,6 @@ from .const import (
     DEFAULT_HISTORY_PAGE_SIZE,
     DEFAULT_POST_SECONDS,
     DEFAULT_PRE_SECONDS,
-    DEFAULT_VERIFY_SSL,
     DOMAIN,
     MAX_CLIP_SECONDS,
     MAX_POST_SECONDS,
@@ -76,6 +76,26 @@ def _bounded_int_default(
     return max(minimum, min(maximum, value))
 
 
+def _is_internal_dsm_host(hostname: str) -> bool:
+    """Return whether a DSM host is safe to treat as an internal endpoint."""
+    host = hostname.strip().rstrip(".").lower()
+    if (
+        host in {"localhost"}
+        or "." not in host
+        or host.endswith((".local", ".lan", ".home", ".home.arpa", ".internal"))
+    ):
+        return True
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    if address.is_private or address.is_loopback or address.is_link_local:
+        return True
+    if isinstance(address, ipaddress.IPv4Address):
+        return address in ipaddress.ip_network("100.64.0.0/10")
+    return address in ipaddress.ip_network("fc00::/7")
+
+
 def _base_schema(defaults: dict[str, Any]) -> vol.Schema:
     pre_default = _bounded_int_default(
         defaults, CONF_PRE_SECONDS, DEFAULT_PRE_SECONDS, 0, MAX_PRE_SECONDS
@@ -92,10 +112,6 @@ def _base_schema(defaults: dict[str, Any]) -> vol.Schema:
             ): TextSelector(
                 TextSelectorConfig(type=TextSelectorType.URL)
             ),
-            vol.Required(
-                CONF_VERIFY_SSL,
-                default=defaults.get(CONF_VERIFY_SSL, DEFAULT_VERIFY_SSL),
-            ): bool,
             _required_field(defaults, CONF_USERNAME): TextSelector(
                 TextSelectorConfig(autocomplete="username")
             ),
@@ -244,11 +260,21 @@ async def _async_prepare_base_input(
     parsed = urllib.parse.urlparse(base_url)
     if (
         parsed.scheme != "https"
-        or not parsed.netloc
+        or not parsed.hostname
         or parsed.username is not None
         or parsed.password is not None
+        or parsed.path not in {"", "/"}
+        or bool(parsed.params)
+        or bool(parsed.query)
+        or bool(parsed.fragment)
     ):
         raise ValueError("invalid_url")
+
+    # Internal DSM endpoints commonly use a self-signed certificate or a
+    # certificate issued only for an external hostname. Keep HTTPS encryption
+    # but skip CA/hostname verification for explicitly internal endpoints.
+    # Public endpoints always require normal certificate verification.
+    data[CONF_VERIFY_SSL] = not _is_internal_dsm_host(parsed.hostname)
 
     notify_entity = str(data[CONF_TELEGRAM_NOTIFY_ENTITY]).strip().lower()
     if (

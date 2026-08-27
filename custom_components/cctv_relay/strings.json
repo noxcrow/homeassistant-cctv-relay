@@ -7,7 +7,6 @@
         "description": "Enter the DSM connection and Telegram settings. The next step loads the Surveillance Station camera list automatically.",
         "data": {
           "synology_url": "Synology DSM HTTPS URL",
-          "verify_ssl": "Verify DSM HTTPS certificate",
           "username": "DSM relay username",
           "password": "DSM relay password",
           "telegram_notify_entity": "Telegram notify entity",
@@ -17,8 +16,7 @@
           "history_interval": "History check interval (seconds)"
         },
         "data_description": {
-          "synology_url": "Use the hostname on the DSM TLS certificate.",
-          "verify_ssl": "Keep enabled for a public hostname. Disable only for a trusted private DSM IP whose certificate does not contain that IP.",
+          "synology_url": "Internal endpoints (private IPs, single-label hostnames, localhost, .local/.lan/.home/.home.arpa/.internal, Tailscale 100.64.0.0/10) keep HTTPS encryption but automatically skip certificate verification. Public endpoints require a valid TLS certificate.",
           "telegram_notify_entity": "A notify entity created by the Telegram bot integration.",
           "pre_seconds": "Enter a number directly. Pre/post time combined is limited to 30 seconds; Telegram files are capped at 45 MB.",
           "post_seconds": "Enter a number directly. Pre/post time combined is limited to 30 seconds; Telegram files are capped at 45 MB."
@@ -29,7 +27,6 @@
         "description": "Verify the DSM connection, then select Surveillance Station cameras again in the next step. Saving reloads the relay while preserving the queue and webhook ID.",
         "data": {
           "synology_url": "Synology DSM HTTPS URL",
-          "verify_ssl": "Verify DSM HTTPS certificate",
           "username": "DSM relay username",
           "password": "DSM relay password",
           "telegram_notify_entity": "Telegram notify entity",
@@ -40,7 +37,8 @@
         },
         "data_description": {
           "pre_seconds": "Enter a number directly. Pre/post time combined is limited to 30 seconds.",
-          "post_seconds": "Enter a number directly. Pre/post time combined is limited to 30 seconds."
+          "post_seconds": "Enter a number directly. Pre/post time combined is limited to 30 seconds.",
+          "synology_url": "Internal endpoints (private IPs, single-label hostnames, localhost, .local/.lan/.home/.home.arpa/.internal, Tailscale 100.64.0.0/10) keep HTTPS encryption but automatically skip certificate verification. Public endpoints require a valid TLS certificate."
         }
       },
       "cameras": {
@@ -54,7 +52,7 @@
     "error": {
       "cannot_connect": "Unable to connect to Synology DSM.",
       "dns_error": "HAOS cannot resolve the DSM hostname. Check local DNS or NAT loopback settings.",
-      "tls_error": "HAOS could not verify the DSM HTTPS certificate. Use the hostname covered by the certificate.",
+      "tls_error": "The public DSM HTTPS certificate could not be verified. Check hostname, expiry, and certificate chain. Internal endpoints automatically bypass certificate verification.",
       "timeout_error": "The DSM connection timed out from HAOS. Check firewall, local DNS, and NAT loopback settings.",
       "webapi_forbidden": "DSM returned HTTP 403 for WebAPI. Point this hostname to the DSM portal, not Web Station or an application portal.",
       "invalid_webapi_response": "The address did not return a valid Synology WebAPI response.",

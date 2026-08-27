@@ -54,7 +54,6 @@ Home Assistant 재시작 후:
 3. 다음 항목을 입력합니다.
 
 - Synology DSM 주소
-- SSL 인증서 검증 여부
 - Synology 사용자 이름 / 비밀번호
 - Surveillance Station에서 조회된 카메라 목록에서 사용할 카메라 1대 이상 선택
 - Telegram Notify 엔티티
@@ -120,7 +119,9 @@ HACS에서 CCTV Relay 업데이트가 표시되면 업데이트 후 Home Assista
 
 ### SSL 오류가 발생하는 경우
 
-DSM이 자체 서명 인증서를 사용하는 경우 인증서 검증 설정을 확인합니다. 가능하면 신뢰할 수 있는 인증서를 사용하는 것을 권장합니다.
+CCTV Relay는 DSM 연결에 HTTPS를 강제합니다. 사설 IP, 단일 호스트명, `localhost`, `.local`/`.lan`/`.home`/`.home.arpa`/`.internal` 호스트, Tailscale/CGNAT `100.64.0.0/10`, IPv6 ULA는 내부 주소로 판단하여 **HTTPS 암호화는 유지하고 인증서 체인 및 호스트명 검증만 자동 우회**합니다.
+
+공인 IP 또는 외부 도메인은 인증서 검증을 강제하므로 DSM 인증서의 호스트명, 만료일, 인증서 체인이 정상이어야 합니다. 외부 주소의 인증서 검증 우회는 지원하지 않습니다.
 
 ### 이벤트가 누락되는 경우
 
@@ -135,7 +136,7 @@ Synology Action Rule에서 동일 이벤트에 대해 웹훅 액션이 여러 �
 - 웹훅 주소와 웹훅 ID를 공개하지 마십시오.
 - DSM 관리자 계정보다는 필요한 최소 권한만 가진 전용 계정 사용을 권장합니다.
 - Synology 계정 비밀번호나 Telegram 관련 토큰을 GitHub 또는 공개 문서에 기록하지 마십시오.
-- Home Assistant와 DSM 간 통신은 가능한 경우 HTTPS를 사용하십시오.
+- Home Assistant와 DSM 간 통신은 HTTPS만 사용합니다. 내부 주소는 인증서 검증만 우회하며 평문 HTTP로 전환하지 않습니다.
 
 ## 라이선스 및 문의
 

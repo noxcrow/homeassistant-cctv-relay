@@ -13,6 +13,8 @@ Home Assistant에서 Synology Surveillance Station의 Action Rule 이벤트를 �
 
 Home Assistant의 Synology DSM 통합은 필요하지 않습니다. CCTV Relay가 Surveillance Station WebAPI에 직접 연결합니다.
 
+DSM 연결은 HTTPS만 허용합니다. 사설 IP, 로컬 호스트 및 Tailscale 내부 주소는 HTTPS 암호화를 유지한 채 인증서 검증만 자동 우회하며, 외부 주소는 유효한 TLS 인증서를 반드시 검증합니다.
+
 ## 설치 및 설정
 
 `custom_components/cctv_relay` 폴더를 Home Assistant 설정 디렉터리의 같은 경로에 복사한 뒤 Home Assistant를 재시작합니다.
