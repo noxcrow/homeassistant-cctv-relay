@@ -1,4 +1,4 @@
-# CCTV Relay
+# [KR] CCTV Relay
 
 Home Assistant에서 Synology Surveillance Station의 Action Rule 이벤트를 수신하고, 선택한 카메라의 녹화 영상을 Telegram으로 전송하는 사용자 지정 통합입니다.
 
@@ -19,7 +19,7 @@ DSM 연결은 HTTPS만 허용합니다. 사설 IP, 로컬 호스트 및 Tailscal
 
 `custom_components/cctv_relay` 폴더를 Home Assistant 설정 디렉터리의 같은 경로에 복사한 뒤 Home Assistant를 재시작합니다.
 
-**설정 → 기기 및 서비스 → 통합 추가 → CCTV Relay**에서 DSM 연결정보를 입력하면 Surveillance Station 카메라 목록을 자동 조회합니다. 사용할 카메라를 1대 이상 다중 선택할 수 있으며 카메라 수에 고정 제한은 없습니다.
+**설정 → 기기 및 서비스 → 통합 추가 → [KR] CCTV Relay**에서 DSM 연결정보를 입력하면 Surveillance Station 카메라 목록을 자동 조회합니다. 사용할 카메라를 1대 이상 다중 선택할 수 있으며 카메라 수에 고정 제한은 없습니다.
 
 Telegram 알림에는 DSM에 설정된 실제 카메라명이 표시됩니다.
 

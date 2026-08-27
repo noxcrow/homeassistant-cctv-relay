@@ -1,4 +1,8 @@
-# [KR] Home Assistant CCTV Relay
+# [KR] CCTV Relay
+
+<p align="center">
+  <img src="custom_components/cctv_relay/brand/icon.png" alt="[KR] CCTV Relay icon" width="128" height="128">
+</p>
 
 Synology Surveillance Station의 Action Rule 이벤트를 Home Assistant에서 받아 CCTV 영상을 Telegram으로 전달하는 커스텀 통합입니다.
 
@@ -31,7 +35,7 @@ Synology Surveillance Station의 Action Rule 이벤트를 Home Assistant에서 �
    `https://github.com/noxcrow/homeassistant-cctv-relay`
 
 4. Category는 **Integration**을 선택합니다.
-5. 목록에서 **CCTV Relay**를 설치합니다.
+5. 목록에서 **[KR] CCTV Relay**를 설치합니다.
 6. Home Assistant를 재시작합니다.
 
 ## 수동 설치
@@ -41,7 +45,7 @@ HACS를 사용하지 않는 경우에도 직접 설치할 수 있습니다.
 1. GitHub 저장소에서 최신 소스 코드를 다운로드합니다.
 2. 저장소의 `custom_components/cctv_relay` 폴더를 Home Assistant 설정 디렉터리의 `custom_components/cctv_relay` 경로로 복사합니다.
 3. Home Assistant를 재시작합니다.
-4. **설정 → 기기 및 서비스 → 통합 추가**에서 **CCTV Relay**를 검색해 설정합니다.
+4. **설정 → 기기 및 서비스 → 통합 추가**에서 **[KR] CCTV Relay**를 검색해 설정합니다.
 
 업데이트 시에도 최신 `custom_components/cctv_relay` 폴더로 기존 파일을 교체한 후 Home Assistant를 재시작하면 됩니다.
 
@@ -50,7 +54,7 @@ HACS를 사용하지 않는 경우에도 직접 설치할 수 있습니다.
 Home Assistant 재시작 후:
 
 1. **설정 → 기기 및 서비스 → 통합 추가**로 이동합니다.
-2. **CCTV Relay**를 검색합니다.
+2. **[KR] CCTV Relay**를 검색합니다.
 3. 다음 항목을 입력합니다.
 
 - Synology DSM 주소
@@ -66,35 +70,63 @@ DSM 연결정보를 입력하면 Surveillance Station의 카메라 목록을 자
 
 감지 전/후 영상 시간의 합계는 최대 30초입니다. Telegram Bot의 일반 비디오 업로드 한계(50MB)에 여유를 두기 위해 CCTV Relay는 최종 영상 파일을 45MB로 제한하며, 카메라 비트레이트가 높아 30초 미만 영상이 45MB를 넘는 경우에도 전송하지 않고 재시도/오류 처리합니다.
 
-## Synology Action Rule 설정
+## Surveillance Station 설정
 
-Surveillance Station의 Action Rule에서 Home Assistant CCTV Relay 웹훅 주소를 호출하도록 설정합니다.
-HTTP Method는 **PUT**으로 설정합니다. CCTV Relay는 웹훅 요청에서 PUT만 허용하며 GET/POST는 거부합니다.
+CCTV Relay를 등록하면 Home Assistant 알림에 선택한 카메라별 웹훅 주소가 표시됩니다. 이 주소를 Synology Surveillance Station의 **Action Rule**에 등록합니다.
 
-통합 등록 후 Home Assistant에 표시되는 웹훅 주소를 사용합니다.
+### 1. Action Rule 생성
 
-형식:
+1. Surveillance Station을 엽니다.
+2. **Action Rule** 메뉴로 이동합니다.
+3. **추가(Add)** 를 선택하여 새 규칙을 생성합니다.
+4. 규칙 유형은 카메라 이벤트가 발생할 때 동작하는 이벤트 기반 규칙으로 설정합니다.
+5. 이벤트 소스에서 대상 카메라를 선택하고 필요한 이벤트를 지정합니다.
+6. 동작(Action)에서 **HTTP/Webhook 요청 전송** 항목을 선택합니다. 메뉴 명칭은 Surveillance Station 버전에 따라 `HTTP Request`, `Webhook` 등으로 표시될 수 있습니다.
+7. HTTP Method는 반드시 **PUT**으로 설정합니다. CCTV Relay는 GET/POST 웹훅 요청을 허용하지 않습니다.
+8. URL에는 Home Assistant에서 표시된 해당 카메라/이벤트의 전체 웹훅 주소를 입력합니다.
+9. 규칙을 저장하고 활성화합니다.
 
-`/api/webhook/<webhook_id>?camera=<camera>&event_type=<event_type>`
+### 2. 카메라별 권장 규칙
 
-### camera 값
+카메라 식별자는 통합 설정에서 확인한 **Surveillance Station 실제 Camera ID**를 사용합니다. 예를 들어 Camera ID가 `7`인 경우 다음과 같이 구성합니다.
 
-`camera`에는 **Surveillance Station의 실제 Camera ID**를 사용합니다. 통합 설정에서 선택한 카메라만 허용됩니다.
+| 용도 | 권장 Action Rule 이름 | 이벤트 | Webhook query |
+| --- | --- | --- | --- |
+| 움직임 감지 | `TG_CAMERA_7_MOTION` | 카메라 움직임 감지 | `?camera=7&event_type=motion` |
+| 연결 끊김 | `TG_CAMERA_7_LOST` | 카메라 연결 끊김/오프라인 | `?camera=7&event_type=lost` |
+| 연결 복구 | `TG_CAMERA_7_RESTORED` | 카메라 재연결/온라인 복구 | `?camera=7&event_type=restored` |
 
-예를 들어 DSM Camera ID가 `7`, `12`, `18`이면 각각 `camera=7`, `camera=12`, `camera=18`을 사용합니다.
+카메라가 여러 대라면 각 Camera ID에 대해 동일한 형식으로 규칙을 생성합니다. 예를 들어 ID `12` 카메라는 `TG_CAMERA_12_MOTION`, `TG_CAMERA_12_LOST`, `TG_CAMERA_12_RESTORED` 형식을 사용합니다.
 
-### event_type 값
+지원 이벤트 유형은 `motion`, `lost`, `restored`입니다.
 
-- `motion` : 움직임 감지
-- `lost` : 카메라 연결 끊김
-- `restored` : 카메라 연결 복구
-- `test` : 테스트 알림
+### 3. Webhook URL
 
-예시:
+통합이 표시하는 전체 URL을 그대로 사용하는 것을 권장합니다. URL 형식은 다음과 같습니다.
 
-`https://homeassistant.example.com/api/webhook/<webhook_id>?camera=7&event_type=motion`
+`http(s)://<Home Assistant 내부주소>/api/webhook/<webhook_id>?camera=<camera_id>&event_type=<event_type>`
 
-웹훅 ID는 외부에 공개하지 마십시오.
+예:
+
+`http(s)://<Home Assistant 내부주소>/api/webhook/<webhook_id>?camera=7&event_type=motion`
+
+웹훅은 **로컬 요청만 허용**하므로 Surveillance Station에서 Home Assistant 내부 주소로 직접 접근할 수 있어야 합니다. 웹훅 ID는 인증에 사용되는 비밀값이므로 외부에 공개하지 마십시오.
+
+### 4. Action Rule History 복구
+
+통합 설정에서 **Action Rule History 복구**를 활성화하면 웹훅이 일시적으로 누락되더라도 Surveillance Station의 Action Rule 실행 이력을 조회해 이벤트를 복구할 수 있습니다.
+
+History 복구를 사용하려면 DSM 계정에 Action Rule History 조회 권한이 있어야 하며, 권장 규칙명인 `TG_CAMERA_<Camera ID>_MOTION`, `TG_CAMERA_<Camera ID>_LOST`, `TG_CAMERA_<Camera ID>_RESTORED` 형식을 유지해야 합니다.
+
+### 5. 설정 확인
+
+설정 후 실제 카메라 이벤트를 발생시켜 다음을 확인합니다.
+
+- Surveillance Station Action Rule 실행 이력에 규칙이 정상 실행되는지
+- HTTP 요청이 실패하지 않는지
+- Home Assistant CCTV Relay 진단 센서에서 대기/실패 이벤트가 증가하지 않는지
+- `motion` 이벤트에서 Telegram 영상이 정상 전송되는지
+- `lost`/`restored` 이벤트에서 Telegram 상태 알림이 정상 전송되는지
 
 ## Telegram 설정
 
