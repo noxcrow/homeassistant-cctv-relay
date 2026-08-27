@@ -26,6 +26,7 @@ Telegram 알림에는 DSM에 설정된 실제 카메라명이 표시됩니다.
 ## Action Rule
 
 카메라 식별자는 Surveillance Station의 실제 Camera ID를 사용합니다. Camera ID가 `7`인 경우 권장 규칙명과 웹훅은 다음과 같습니다.
+Surveillance Station Action Rule의 HTTP Method는 **PUT**으로 설정합니다. CCTV Relay는 GET/POST 웹훅 요청을 허용하지 않습니다.
 
 - `TG_CAMERA_7_MOTION` → `?camera=7&event_type=motion`
 - `TG_CAMERA_7_LOST` → `?camera=7&event_type=lost`

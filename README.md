@@ -69,6 +69,7 @@ DSM 연결정보를 입력하면 Surveillance Station의 카메라 목록을 자
 ## Synology Action Rule 설정
 
 Surveillance Station의 Action Rule에서 Home Assistant CCTV Relay 웹훅 주소를 호출하도록 설정합니다.
+HTTP Method는 **PUT**으로 설정합니다. CCTV Relay는 웹훅 요청에서 PUT만 허용하며 GET/POST는 거부합니다.
 
 통합 등록 후 Home Assistant에 표시되는 웹훅 주소를 사용합니다.
 

@@ -41,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         webhook_id,
         runtime.async_handle_webhook,
         local_only=True,
-        allowed_methods=("GET", "POST", "PUT"),
+        allowed_methods=("PUT",),
     )
 
     try:
