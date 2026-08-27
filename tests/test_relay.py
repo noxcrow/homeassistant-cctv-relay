@@ -149,6 +149,23 @@ class SynologyLoginCompatibilityTests(unittest.TestCase):
         self.assertNotIn("enable_device_token", params)
         self.assertTrue(client._request_json.call_args.kwargs.get("post", False))
 
+
+    def test_post_routes_api_in_query_without_credentials(self):
+        client = self._client()
+        response = Mock()
+        response.__enter__ = Mock(return_value=response)
+        response.__exit__ = Mock(return_value=False)
+        response.read = Mock(return_value=b'{"success": true, "data": {"sid": "abc123"}}')
+        client._opener.open = Mock(return_value=response)
+        client.login("relay-user", "super-secret")
+        request = client._opener.open.call_args.args[0]
+        self.assertIn("api=SYNO.API.Auth", request.full_url)
+        self.assertNotIn("relay-user", request.full_url)
+        self.assertNotIn("super-secret", request.full_url)
+        body = request.data.decode("utf-8")
+        self.assertIn("account=relay-user", body)
+        self.assertIn("passwd=super-secret", body)
+
     def test_tls_context_requires_tls_1_2_or_newer(self):
         client = self._client()
         self.assertGreaterEqual(

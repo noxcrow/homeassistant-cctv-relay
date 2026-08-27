@@ -420,7 +420,14 @@ class SynologyClient:
         post: bool = False,
     ) -> dict[str, Any]:
         if post:
+            # Some DSM versions route WebAPI POST requests by the API name in
+            # the query string even when the same value is present in the POST
+            # body. Keep credentials in the request body while exposing only
+            # the non-secret API routing key in the URL.
+            api_name = str(params.get("api", "")).strip()
             url = f"{self.base_url}/webapi/{path.lstrip('/')}"
+            if api_name:
+                url = f"{url}?{urllib.parse.urlencode({'api': api_name})}"
             data = urllib.parse.urlencode(params).encode("utf-8")
             request = urllib.request.Request(
                 url,
