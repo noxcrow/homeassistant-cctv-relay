@@ -61,8 +61,6 @@
       "invalid_url": "Enter a valid Synology DSM HTTPS URL.",
       "invalid_auth": "DSM authentication failed.",
       "otp_required": "This DSM account requires an OTP that CCTV Relay cannot submit. Use a dedicated Surveillance Station account without interactive OTP.",
-      "account_locked": "The DSM account is locked or temporarily blocked.",
-      "password_change_required": "The DSM account password has expired or must be changed before API login.",
       "insufficient_permissions": "The DSM account does not have the required recording or Action Rule history permissions.",
       "recording_check_failed": "Recording access failed for a selected Surveillance Station camera. Check recording playback permissions.",
       "history_check_failed": "Action Rule history could not be queried. Disable history recovery for a spectator account or use a Surveillance Station administrator.",
@@ -74,7 +72,12 @@
       "clip_duration_too_long": "The combined pre/post clip duration cannot exceed 30 seconds.",
       "no_cameras": "No Surveillance Station cameras are visible to this DSM account. Check camera permissions.",
       "no_camera_selected": "Select at least one camera.",
-      "duplicate_cameras": "The same camera cannot be selected more than once."
+      "duplicate_cameras": "The same camera cannot be selected more than once.",
+      "account_disabled": "This DSM account is disabled or is a guest account.",
+      "account_blocked": "DSM auto-block has blocked further login attempts.",
+      "password_change_required": "The DSM account password is expired or must be changed.",
+      "account_locked": "The DSM account is locked.",
+      "app_portal_error": "The DSM application portal is incorrect. Use the DSM WebAPI endpoint."
     },
     "abort": {
       "already_configured": "CCTV Relay is already configured.",

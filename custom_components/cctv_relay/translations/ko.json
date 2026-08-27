@@ -61,8 +61,6 @@
       "invalid_url": "올바른 Synology DSM HTTPS 주소를 입력하세요.",
       "invalid_auth": "DSM 인증에 실패했습니다.",
       "otp_required": "이 DSM 계정은 CCTV Relay가 입력할 수 없는 OTP를 요구합니다. 대화형 OTP가 없는 Surveillance Station 전용 계정을 사용하세요.",
-      "account_locked": "DSM 계정이 잠겼거나 일시적으로 차단되었습니다.",
-      "password_change_required": "DSM 계정 암호가 만료되었거나 API 로그인 전에 암호를 변경해야 합니다.",
       "insufficient_permissions": "DSM 계정에 녹화 또는 Action Rule 이력 조회 권한이 없습니다.",
       "recording_check_failed": "선택한 Surveillance Station 카메라의 녹화 조회에 실패했습니다. 녹화 재생/조회 권한을 확인하세요.",
       "history_check_failed": "Action Rule 이력을 조회하지 못했습니다. 감시자 계정은 이력 복구를 끄거나 Surveillance Station 관리자 계정을 사용하세요.",
@@ -74,7 +72,12 @@
       "clip_duration_too_long": "감지 전/후 영상 시간의 합계는 최대 30초까지 설정할 수 있습니다.",
       "no_cameras": "이 DSM 계정에서 조회 가능한 Surveillance Station 카메라가 없습니다. 카메라 접근 권한을 확인하세요.",
       "no_camera_selected": "카메라를 1대 이상 선택하세요.",
-      "duplicate_cameras": "동일한 카메라를 중복 선택할 수 없습니다."
+      "duplicate_cameras": "동일한 카메라를 중복 선택할 수 없습니다.",
+      "account_disabled": "이 DSM 계정은 비활성화되어 있거나 게스트 계정입니다.",
+      "account_blocked": "DSM 자동 차단 정책으로 로그인 시도가 차단되었습니다.",
+      "password_change_required": "DSM 계정 비밀번호가 만료되었거나 변경이 필요합니다.",
+      "account_locked": "DSM 계정이 잠겨 있습니다.",
+      "app_portal_error": "DSM 애플리케이션 포털 경로가 올바르지 않습니다. DSM 기본 WebAPI 주소를 사용하세요."
     },
     "abort": {
       "already_configured": "CCTV 릴레이가 이미 설정되어 있습니다.",

@@ -487,6 +487,12 @@ class SynologyClient:
         return version
 
     def login(self, username: str, password: str) -> SynologySession:
+        """Authenticate using the Surveillance Station SID login format.
+
+        Keep the request intentionally minimal. The official Surveillance
+        Station WebAPI sample uses a SID session without SynoToken/device-token
+        options, which is compatible across a wider range of DSM releases.
+        """
         api = "SYNO.API.Auth"
         data = self._request_json(
             self._api_path(api),
@@ -498,9 +504,7 @@ class SynologyClient:
                 "passwd": password,
                 "session": "SurveillanceStation",
                 "format": "sid",
-                "enable_syno_token": "yes",
             },
-            post=True,
         )
         sid = data.get("sid")
         if not isinstance(sid, str) or not sid:
@@ -517,9 +521,7 @@ class SynologyClient:
             "session": "SurveillanceStation",
             "_sid": session.sid,
         }
-        if session.synotoken:
-            params["SynoToken"] = session.synotoken
-        self._request_json(self._api_path(api), params, post=True)
+        self._request_json(self._api_path(api), params)
 
     @contextlib.contextmanager
     def session(self, username: str, password: str) -> Iterator[SynologySession]:

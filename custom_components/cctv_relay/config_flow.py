@@ -302,12 +302,18 @@ def _error_key(exc: Exception) -> str:
         if operation == "login":
             if exc.code in {403, 404, 406}:
                 return "otp_required"
-            if exc.code in {407, 411}:
-                return "account_locked"
-            if exc.code in {408, 409, 410}:
-                return "password_change_required"
+            if exc.code == 401:
+                return "account_disabled"
             if exc.code == 402:
                 return "insufficient_permissions"
+            if exc.code == 407:
+                return "account_blocked"
+            if exc.code in {408, 409, 410}:
+                return "password_change_required"
+            if exc.code == 411:
+                return "account_locked"
+            if exc.code == 405:
+                return "app_portal_error"
             return "invalid_auth"
         if exc.code == 105:
             return "insufficient_permissions"

@@ -123,6 +123,41 @@ class CameraConfigTests(unittest.TestCase):
         self.assertEqual(camera.display_name, "카메라 ID 7 (ID 7)")
 
 
+class SynologyLoginCompatibilityTests(unittest.TestCase):
+    def _client(self):
+        client = relay.SynologyClient(
+            "https://dsm.example", None, 5, 5, verify_ssl=False
+        )
+        client._api_info = {
+            "SYNO.API.Auth": {"path": "auth.cgi", "minVersion": 1, "maxVersion": 7},
+            "SYNO.SurveillanceStation.Camera": {"path": "entry.cgi", "minVersion": 1, "maxVersion": 9},
+            "SYNO.SurveillanceStation.Recording": {"path": "entry.cgi", "minVersion": 1, "maxVersion": 6},
+            "SYNO.SurveillanceStation.ActionRule": {"path": "entry.cgi", "minVersion": 1, "maxVersion": 1},
+        }
+        return client
+
+    def test_login_uses_minimal_surveillance_station_sid_request(self):
+        client = self._client()
+        client._request_json = Mock(return_value={"sid": "abc123"})
+        session = client.login("relay", "secret")
+        self.assertEqual(session.sid, "abc123")
+        _, params = client._request_json.call_args.args[:2]
+        self.assertEqual(params["session"], "SurveillanceStation")
+        self.assertEqual(params["format"], "sid")
+        self.assertNotIn("enable_syno_token", params)
+        self.assertNotIn("enable_device_token", params)
+        self.assertFalse(client._request_json.call_args.kwargs.get("post", False))
+
+    def test_logout_uses_sid_without_synotoken(self):
+        client = self._client()
+        client._request_json = Mock(return_value={})
+        client.logout(relay.SynologySession("abc123", "token-value"))
+        _, params = client._request_json.call_args.args[:2]
+        self.assertEqual(params["_sid"], "abc123")
+        self.assertNotIn("SynoToken", params)
+        self.assertFalse(client._request_json.call_args.kwargs.get("post", False))
+
+
 class SynologyCameraDiscoveryTests(unittest.TestCase):
     def _client(self):
         client = relay.SynologyClient(
