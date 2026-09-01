@@ -72,7 +72,7 @@ DSM 연결정보를 입력하면 Surveillance Station의 카메라 목록을 자
 
 ## Surveillance Station 설정
 
-CCTV Relay를 등록하면 Home Assistant 알림에 선택한 카메라별 웹훅 주소가 표시됩니다. 이 주소를 Synology Surveillance Station의 **Action Rule**에 등록합니다.
+CCTV Relay를 처음 등록하면 Home Assistant 알림에 선택한 카메라별 웹훅 주소가 **1회 표시**됩니다. 업데이트, Home Assistant 재시작, 통합 재로드 또는 재구성만으로는 이 안내가 다시 생성되지 않습니다. 이 주소를 Synology Surveillance Station의 **Action Rule**에 등록합니다.
 
 ### 1. Action Rule 생성
 

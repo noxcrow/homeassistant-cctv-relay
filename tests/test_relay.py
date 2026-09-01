@@ -1,3 +1,4 @@
+import ast
 import importlib.util
 import pathlib
 import ssl
@@ -341,6 +342,38 @@ class DurationParsingTests(unittest.TestCase):
             video.write_bytes(b"not-empty")
             with patch.object(relay.subprocess, "run", return_value=result):
                 relay._validate_video_duration(video, "/usr/bin/ffmpeg")
+
+
+class WebhookNotificationRegressionTests(unittest.TestCase):
+    def _function_source(self, path: pathlib.Path, function_name: str) -> str:
+        source = path.read_text()
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name:
+                segment = ast.get_source_segment(source, node)
+                self.assertIsNotNone(segment)
+                return segment or ""
+        self.fail(f"function {function_name} not found in {path}")
+
+    def test_setup_entry_does_not_recreate_webhook_notice(self):
+        path = pathlib.Path(__file__).parents[1] / "custom_components/cctv_relay/__init__.py"
+        source = self._function_source(path, "async_setup_entry")
+        self.assertNotIn("persistent_notification.async_create", source)
+        self.assertNotIn("_async_show_initial_webhook_notification", source)
+
+    def test_new_config_entry_creates_notice_after_reconfigure_branch(self):
+        path = pathlib.Path(__file__).parents[1] / "custom_components/cctv_relay/config_flow.py"
+        source = self._function_source(path, "async_step_cameras")
+        self.assertEqual(source.count("_async_show_initial_webhook_notification("), 1)
+        self.assertLess(source.index("if self._reconfigure:"), source.index("_async_show_initial_webhook_notification("))
+        reconfigure_block = source[source.index("if self._reconfigure:"):source.index("webhook_id = webhook.async_generate_id()")]
+        self.assertNotIn("_async_show_initial_webhook_notification", reconfigure_block)
+
+    def test_notice_supports_only_production_event_types(self):
+        path = pathlib.Path(__file__).parents[1] / "custom_components/cctv_relay/config_flow.py"
+        source = self._function_source(path, "_async_show_initial_webhook_notification")
+        self.assertIn('("motion", "lost", "restored")', source)
+        self.assertNotIn('"test"', source)
 
 
 if __name__ == "__main__":

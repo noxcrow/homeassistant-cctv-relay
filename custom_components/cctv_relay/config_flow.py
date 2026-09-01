@@ -13,10 +13,11 @@ import urllib.parse
 
 import voluptuous as vol
 
-from homeassistant.components import webhook
+from homeassistant.components import persistent_notification, webhook
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.network import NoURLAvailableError
 from homeassistant.helpers.selector import (
     EntitySelector,
     EntitySelectorConfig,
@@ -56,6 +57,53 @@ from .const import (
 from .relay import ConfigError, RelayError, SynologyAPIError, SynologyClient
 
 _LOGGER = logging.getLogger(__name__)
+_NOTIFICATION_PREFIX = "cctv_relay_webhooks"
+
+
+def _async_show_initial_webhook_notification(
+    hass: HomeAssistant,
+    webhook_id: str,
+    camera_ids: list[int],
+    camera_names: dict[int, str],
+) -> None:
+    """Show DSM Action Rule URLs once, immediately after initial setup."""
+    try:
+        base_webhook_url = webhook.async_generate_url(
+            hass,
+            webhook_id,
+            allow_internal=True,
+            allow_external=False,
+            prefer_external=False,
+        )
+    except NoURLAvailableError:
+        base_webhook_url = (
+            "http://HOME_ASSISTANT_IP:8123"
+            f"{webhook.async_generate_path(webhook_id)}"
+        )
+
+    lines = [
+        "Surveillance Station Action Rule의 웹훅 URL을 아래 값으로 설정하세요.",
+        "선택한 각 카메라에 필요한 이벤트 규칙만 생성하면 됩니다.",
+        "이 URL에는 비밀 키가 포함되므로 외부에 공개하지 마세요.",
+        "",
+    ]
+    for camera_id in camera_ids:
+        display_name = camera_names.get(camera_id) or f"Camera ID {camera_id}"
+        lines.append(f"### {display_name}")
+        for event_type in ("motion", "lost", "restored"):
+            rule_name = f"TG_CAMERA_{camera_id}_{event_type.upper()}"
+            lines.append(
+                f"- `{rule_name}`: "
+                f"`{base_webhook_url}?camera={camera_id}&event_type={event_type}`"
+            )
+        lines.append("")
+
+    persistent_notification.async_create(
+        hass,
+        "\n".join(lines),
+        title="CCTV Relay 웹훅 설정",
+        notification_id=f"{_NOTIFICATION_PREFIX}_{webhook_id}",
+    )
 
 
 def _required_field(
@@ -525,7 +573,14 @@ class CCTVRelayConfigFlow(ConfigFlow, domain=DOMAIN):
                     return self.async_update_reload_and_abort(
                         entry, data_updates=data
                     )
-                data[CONF_WEBHOOK_ID] = webhook.async_generate_id()
+                webhook_id = webhook.async_generate_id()
+                data[CONF_WEBHOOK_ID] = webhook_id
+                _async_show_initial_webhook_notification(
+                    self.hass,
+                    webhook_id,
+                    data[CONF_CAMERA_IDS],
+                    self._camera_names,
+                )
                 return self.async_create_entry(title="CCTV Relay", data=data)
 
         return self.async_show_form(
